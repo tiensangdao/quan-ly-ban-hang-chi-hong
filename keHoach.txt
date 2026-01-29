@@ -1,0 +1,415 @@
+bạn xem kế hoạch của claude tốt ko tôi sẽ làm theo nó nha
+🎯 KẾ HOẠCH HOÀN CHỈNH - LOGIC & TIỆN LỢI NHẤT CHO CHỊ HỒNG
+📊 THIẾT KẾ DATABASE TỐI ỨU (SUPABASE)
+📦 Bảng 1: DANH MỤC SẢN PHẨM (products)
+CREATE TABLE products (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+ten_hang TEXT NOT NULL UNIQUE, -- "Cốc 140", "Túi bóng"
+don_vi TEXT DEFAULT 'cái', -- "cái", "cân", "kg", "gói"
+gia_nhap_gan_nhat NUMERIC DEFAULT 0, -- Tự động cập nhật khi nhập hàng mới
+mo_ta TEXT, -- Ghi chú về sản phẩm
+active BOOLEAN DEFAULT true, -- Ẩn/hiện sản phẩm
+created_at TIMESTAMP DEFAULT NOW()
+);
+📥 Bảng 2: NHẬP HÀNG (nhap_hang)
+CREATE TABLE nhap_hang (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+product_id UUID REFERENCES products(id), -- Liên kết với danh mục
+ngay_thang DATE NOT NULL,
+so_luong NUMERIC NOT NULL,
+don_gia NUMERIC NOT NULL,
+thanh_tien NUMERIC GENERATED ALWAYS AS (so_luong * don_gia) STORED,
+nha_cung_cap TEXT, -- VD: "Bác Lan"
+ghi_chu TEXT,
+metadata JSONB, -- Cho custom fields linh hoạt
+created_at TIMESTAMP DEFAULT NOW()
+);
+-- Index để query nhanh
+CREATE INDEX idx_nhap_hang_product ON nhap_hang(product_id);
+CREATE INDEX idx_nhap_hang_date ON nhap_hang(ngay_thang DESC);
+💰 Bảng 3: BÁN HÀNG (ban_hang)
+CREATE TABLE ban_hang (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+product_id UUID REFERENCES products(id),
+ngay_ban DATE NOT NULL,
+khach_hang TEXT DEFAULT 'Khách lẻ',
+so_luong NUMERIC NOT NULL,
+gia_nhap NUMERIC NOT NULL, -- Tự động điền từ giá nhập gần nhất
+gia_ban NUMERIC NOT NULL,
+lai NUMERIC GENERATED ALWAYS AS ((gia_ban - gia_nhap) * so_luong) STORED,
+ghi_chu TEXT,
+metadata JSONB,
+created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_ban_hang_product ON ban_hang(product_id);
+CREATE INDEX idx_ban_hang_date ON ban_hang(ngay_ban DESC);
+📊 Bảng 4: CHỐT THÁNG/NĂM (chot_ky)
+CREATE TABLE chot_ky (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+loai TEXT NOT NULL, -- "thang" hoặc "nam"
+ky TEXT NOT NULL, -- "01/2024" hoặc "2024"
+product_id UUID REFERENCES products(id),
+tong_nhap_so_luong NUMERIC,
+tong_nhap_tien NUMERIC,
+tong_ban_so_luong NUMERIC,
+tong_ban_tien NUMERIC,
+lai_gop NUMERIC,
+ton_kho NUMERIC, -- Số lượng còn lại
+ghi_chu TEXT,
+created_at TIMESTAMP DEFAULT NOW(),
+UNIQUE(loai, ky, product_id) -- Không trùng kỳ
+);
+📈 VIEW: TỒN KHO TỰ ĐỘNG (inventory_balance)
+CREATE VIEW inventory_balance AS
+SELECT
+p.id as product_id,
+p.ten_hang,
+p.don_vi,
+COALESCE(SUM(nh.so_luong), 0) as tong_nhap,
+COALESCE(SUM(bh.so_luong), 0) as tong_ban,
+COALESCE(SUM(nh.so_luong), 0) - COALESCE(SUM(bh.so_luong), 0) as ton_kho,
+p.gia_nhap_gan_nhat,
+MAX(nh.ngay_thang) as ngay_nhap_gan_nhat
+FROM products p
+LEFT JOIN nhap_hang nh ON p.id = nh.product_id
+LEFT JOIN ban_hang bh ON p.id = bh.product_id
+WHERE p.active = true
+GROUP BY p.id, p.ten_hang, p.don_vi, p.gia_nhap_gan_nhat;
+🔄 TRIGGER: Tự động cập nhật giá nhập gần nhất
+CREATE OR REPLACE FUNCTION update_latest_price()
+RETURNS TRIGGER AS $$
+BEGIN
+UPDATE products
+SET gia_nhap_gan_nhat = NEW.don_gia
+WHERE id = NEW.product_id;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trigger_update_price
+AFTER INSERT ON nhap_hang
+FOR EACH ROW
+EXECUTE FUNCTION update_latest_price();
+📱 LUỒNG HOẠT ĐỘNG TỐI ỨU (MOBILE-FIRST)
+🎯 FLOW 1: NHẬP HÀNG (3 bước đơn giản)
+┌─────────────────────────────────┐
+│ 📥 NHẬP HÀNG MỚI │
+├─────────────────────────────────┤
+│ 📅 Ngày: [29/01/2026] [📆] │ ← Tự động hôm nay
+│ │
+│ 🔍 Sản phẩm: │
+│ ┌───────────────────────────┐ │
+│ │ Cốc 140 [▼] │ │ ← Dropdown có search
+│ └───────────────────────────┘ │
+│ 💡 Giá nhập lần trước: 36k │ ← Gợi ý tự động
+│ │
+│ 📦 Số lượng: │
+│ ┌───────────────────────────┐ │
+│ │ 50 cái │ │ ← Bàn phím số tự động
+│ └───────────────────────────┘ │
+│ │
+│ 💵 Đơn giá: │
+│ ┌───────────────────────────┐ │
+│ │ 40,000 │ │ ← Format tự động
+│ └───────────────────────────┘ │
+│ │
+│ 💰 Thành tiền: 2,000,000 │ ← Tự tính
+│ │
+│ 👤 Nhà cung cấp: [Bác Lan] │
+│ 📝 Ghi chú: [ ] │
+│ │
+│ [✓ LƯU NGAY] │ ← Nút to, màu nổi
+└─────────────────────────────────┘
+↓ Sau khi lưu
+┌─────────────────────────────────┐
+│ ✅ Đã lưu thành công! │
+│ │
+│ [➕ Nhập tiếp] [📊 Xem báo cáo]│
+└─────────────────────────────────┘
+Logic đặc biệt:
+Khi chọn sản phẩm → tự động điền giá nhập gần nhất
+Khi nhập số lượng/đơn giá → tự động tính thành tiền realtime
+Sau khi lưu → cập nhật tồn kho tức thì
+Nếu nhập sản phẩm mới (chưa có trong list) → hiện popup "Thêm sản phẩm mới?"
+🎯 FLOW 2: BÁN HÀNG (4 bước, tự động tính lãi)
+┌─────────────────────────────────┐
+│ 💰 BÁN HÀNG │
+├─────────────────────────────────┤
+│ 📅 Ngày: [29/01/2026] │
+│ │
+│ 🔍 Sản phẩm: │
+│ ┌───────────────────────────┐ │
+│ │ Cốc 140 [▼] │ │
+│ └───────────────────────────┘ │
+│ 💡 Giá nhập: 40k | Tồn: 50 │ ← Thông tin quan trọng
+│ │
+│ 📦 Số lượng: │
+│ ┌───────────────────────────┐ │
+│ │ 10 cái │ │
+│ └───────────────────────────┘ │
+│ ⚠️ Sau bán còn: 40 cái │ ← Cảnh báo realtime
+│ │
+│ 💵 Giá bán: │
+│ ┌───────────────────────────┐ │
+│ │ 45,000 │ │
+│ └───────────────────────────┘ │
+│ │
+│ 💸 Thành tiền: 450,000 │
+│ 💰 Lãi: +50,000 (11.1%) │ ← Tự tính lãi & %
+│ │
+│ 👤 Khách hàng: [Khách lẻ] │
+│ 📝 Ghi chú: [ ] │
+│ │
+│ [✓ BÁN & LƯU] │
+└─────────────────────────────────┘
+Logic tự động:
+Chọn sản phẩm → Tự động điền giá nhập (từ DB)
+Nhập số lượng → Tự động tính tồn kho sau bán
+Nhập giá bán → Tự động tính lãi realtime
+Cảnh báo nếu bán quá số tồn kho
+🎯 FLOW 3: XEM TỒN KHO (1 chạm)
+┌─────────────────────────────────┐
+│ 📦 TỒN KHO HIỆN TẠI │
+├─────────────────────────────────┤
+│ 🔍 Tìm sản phẩm: [ ] │
+│ │
+│ ┌─────────────────────────────┐│
+│ │ Cốc 140 ││
+│ │ 📦 Tồn: 50 cái ││
+│ │ 💵 Giá nhập: 40,000 ││
+│ │ 📅 Nhập gần nhất: 29/01 ││
+│ └─────────────────────────────┘│
+│ │
+│ ┌─────────────────────────────┐│
+│ │ Túi bóng ││
+│ │ 📦 Tồn: 5 cân ││
+│ │ 💵 Giá nhập: 36,000 ││
+│ │ 📅 Nhập gần nhất: 24/01 ││
+│ │ ⚠️ Sắp hết hàng! ││
+│ └─────────────────────────────┘│
+│ │
+│ ┌─────────────────────────────┐│
+│ │ Cốc 2 LỚ ││
+│ │ ❌ Hết hàng ││
+│ │ 💵 Giá nhập: 45,000 ││
+│ │ 📅 Nhập gần nhất: 12/01 ││
+│ └─────────────────────────────┘│
+└─────────────────────────────────┘
+Tính năng:
+Hiển thị màu: 🟢 Còn nhiều / 🟡 Sắp hết / 🔴 Hết hàng
+Sắp xếp theo: Sắp hết → Còn nhiều
+Chạm vào sản phẩm → Xem lịch sử nhập/bán
+📊 BIỂU ĐỒ & THỐNG KÊ
+📈 Dashboard Trang chủ
+┌─────────────────────────────────┐
+│ 📊 TỔNG QUAN THÁNG 1 │
+├─────────────────────────────────┤
+│ 📥 Chi nhập hàng: 15.500.000 │
+│ 💰 Doanh thu: 18.200.000 │
+│ 💸 Lãi gộp: +2.700.000 │
+│ 📈 Tỷ lệ lãi: 17.4% │
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 📊 CHI NHẬP THEO THÁNG │
+├─────────────────────────────────┤
+│ │
+│ ▓▓▓ │ 18M
+│ ▓▓▓ ▓▓▓ │ 15M
+│ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ │ 12M
+│ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ │ 9M
+│ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ ▓▓▓ │ 6M
+│ T10 T11 T12 T1 T2 T3 T4 │
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 💰 LÃI THEO THÁNG │
+├─────────────────────────────────┤
+│ ███ │ +3M
+│ ███ ███ │ +2M
+│ ███ ███ ███ │ +1M
+│ ███ ███ ███ ███ │ 0
+│ T10 T11 T12 T1 │
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 🏆 TOP SẢN PHẨM BÁN CHẠY │
+├─────────────────────────────────┤
+│ 1. Cốc 140 450 cái ⭐⭐⭐│
+│ 2. Túi bóng 120 cân ⭐⭐ │
+│ 3. Cốc 2 LỚ 89 cái ⭐ │
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ ⚠️ CẢNH BÁO │
+├─────────────────────────────────┤
+│ 🔴 Túi bóng sắp hết (5 cân) │
+│ 🔴 Cốc 2 LỚ hết hàng │
+│ 🟡 Chưa nhập hàng hôm nay │
+└─────────────────────────────────┘
+📊 Biểu đồ Chi tiết (Thống kê Page)
+1. Biểu đồ Cột - Chi/Thu theo tháng
+// Recharts - Bar Chart
+{
+labels: ['T10', 'T11', 'T12', 'T1', 'T2'],
+datasets: [
+{ name: 'Chi nhập', data: [12M, 15M, 18M, 15.5M, 14M], color: '#EF4444' },
+{ name: 'Doanh thu', data: [14M, 17M, 20M, 18.2M, 16M], color: '#10B981' }
+]
+}
+2. Biểu đồ Tròn - Cơ cấu chi nhập theo sản phẩm
+// Pie Chart
+{
+data: [
+{ name: 'Cốc 140', value: 8M, percent: 45% },
+{ name: 'Túi bóng', value: 5M, percent: 28% },
+{ name: 'Cốc 2 LỚ', value: 2.5M, percent: 14% },
+{ name: 'Khác', value: 2.3M, percent: 13% }
+]
+}
+3. Biểu đồ Đường - Xu hướng lãi
+// Line Chart
+{
+data: [
+{ month: 'T10', lai: 1.8M },
+{ month: 'T11', lai: 2.1M },
+{ month: 'T12', lai: 2.5M },
+{ month: 'T1', lai: 2.7M }
+]
+}
+4. Heat Map - Ngày nào nhập/bán nhiều nhất
+MO TU WE TH FR SA SU
+Tuần 1 🟢 🟡 🟢 🟢 🔴 🔴 ⚪
+Tuần 2 🟢 🟢 🟡 🟢 🟢 🔴 ⚪
+Tuần 3 🟡 🟢 🟢 🔴 🟢 🟢 ⚪
+Tuần 4 🟢 🟢 🟢 🟢 🟡 🟢 ⚪
+🔴 > 1M 🟢 500k-1M 🟡 < 500k ⚪ Không hoạt động
+🎨 BOTTOM NAVIGATION (One-Handed Design)
+┌─────────────────────────────────┐
+│ │
+│ [Nội dung trang] │
+│ │
+│ │
+└─────────────────────────────────┘
+┌─────────────────────────────────┐
+│ 🏠 ➕ 📦 📊 ⚙️ │
+│ Tổng Nhập Tồn Báo Cài │
+│ quan hàng kho cáo đặt │
+└─────────────────────────────────┘
+👆 Nút "Nhập hàng" nổi bật nhất
+Chi tiết navigation:
+🏠 Tổng quan - Dashboard, cảnh báo
+➕ Nhập hàng - Form nhập (màu highlight)
+📦 Tồn kho - Xem nhanh còn gì
+📊 Báo cáo - Biểu đồ, chốt tháng
+⚙️ Cài đặt - Backup, xuất Excel, quản lý sản phẩm
+🔧 TÍNH NĂNG CUSTOM FIELDS (JSONB)
+Thêm trường tùy chỉnh đơn giản:
+-- Ví dụ metadata trong bảng nhap_hang
+{
+"nhan_vien_nhap": "Chị Lan",
+"kho_luu_tru": "Kho A",
+"ma_lo_hang": "LOT20240129",
+"han_su_dung": "2025-12-31"
+}
+Giao diện quản lý:
+⚙️ Cài đặt → Trường tùy chỉnh
+📥 BẢNG NHẬP HÀNG
+┌─────────────────────────────────┐
+│ ✓ Nhân viên nhập (text) │
+│ ✓ Kho lưu trữ (text) │
+│ ✓ Mã lô hàng (text) │
+│ Hạn sử dụng (date) [Tắt] │
+│ │
+│ [+ Thêm trường mới] │
+└─────────────────────────────────┘
+Khi nhập hàng, form tự động thêm:
+💼 Nhân viên nhập: [Chị Lan ]
+🏭 Kho lưu trữ: [Kho A ]
+🏷️ Mã lô hàng: [LOT20240129]
+🛡️ HỆ THỐNG BACKUP 3 LỚP
+Lớp 1: Supabase (Real-time)
+Mỗi thao tác → lưu ngay vào Supabase
+Có Row Level Security (RLS)
+Auto backup mỗi ngày
+Lớp 2: Google Sheets (Auto Sync)
+// Sau mỗi lần nhập/bán → tự động sync
+const syncToGoogleSheets = async (data) => {
+await fetch('https://sheets.googleapis.com/v4/spreadsheets/...', {
+method: 'POST',
+body: JSON.stringify({
+range: 'Nhập hàng!A:F',
+values: [[data.ngay, data.ten_hang, data.so_luong, ...]]
+})
+});
+}
+Structure Google Sheets:
+Sheet 1: Nhập hàng
+Sheet 2: Bán hàng
+Sheet 3: Tồn kho (Formula)
+Sheet 4: Chốt tháng
+Sheet 5: Log (lịch sử thay đổi)
+Lớp 3: Manual Export
+⚙️ Cài đặt → Backup & Xuất
+📊 Xuất dữ liệu
+┌─────────────────────────────────┐
+│ [📥 Tải về Excel (.xlsx)] │
+│ [☁️ Sync Google Sheets ngay] │
+│ [📧 Email backup cho tôi] │
+└─────────────────────────────────┘
+📅 Backup tự động
+┌─────────────────────────────────┐
+│ ✓ Backup hàng ngày lúc 12h đêm │
+│ ✓ Gửi email báo cáo hàng tuần │
+│ ✓ Lưu lịch sử 30 ngày │
+└─────────────────────────────────┘
+🚀 KẾ HOẠCH THỰC HIỆN CẬP NHẬT
+Phase 1: Foundation (2 ngày)
+✅ Setup Vercel + Supabase + Google Sheets API
+✅ Database schema với JSONB
+✅ Bảng products master
+✅ View inventory_balance
+✅ Trigger tự động cập nhật giá
+Phase 2: Core Features (3 ngày)
+✅ Form nhập hàng với auto-complete
+✅ Form bán hàng với tính lãi realtime
+✅ Trang tồn kho với cảnh báo
+✅ UI/UX mobile one-handed
+✅ Bàn phím số tự động
+Phase 3: Analytics (2 ngày)
+✅ Dashboard tổng quan
+✅ 4 loại biểu đồ (Bar, Pie, Line, Heat)
+✅ Top sản phẩm bán chạy
+✅ Chốt tháng tự động
+Phase 4: Backup & Polish (2 ngày)
+✅ Auto sync Google Sheets
+✅ Export Excel với template đẹp
+✅ Email báo cáo
+✅ Offline mode với Service Worker
+✅ PWA install
+Phase 5: Custom Fields (1 ngày)
+✅ Quản lý JSONB fields
+✅ Dynamic form rendering
+✅ Export có custom fields
+❓ CÂU HỎI TRƯỚC KHI CODE
+Chị có tài khoản Google không? (Cần để sync Sheets)
+Có cần đăng nhập không? (Nếu nhiều người dùng)
+Màu sắc yêu thích? (Để thiết kế giao diện)
+Có cần in hóa đơn không? (In nhiệt, A4, hoặc PDF)
+Ngân sách hosting: Free tier Supabase đủ dùng 2-3 năm, nhưng nếu muốn "vĩnh viễn" có thể nâng cấp sau (10$/tháng)
+Bạn OK với plan này không? Em bắt đầu code ngay! 🚀
+XÁC NHẬN REQUIREMENTS
+✅ Dùng Google account của bạn (không cần login)
+✅ Màu sắc đơn giản, dễ chịu (em chọn tone xanh dương/xanh lá nhẹ nhàng)
+✅ 1 người dùng (chị Hồng)
+✅ Không cần in hóa đơn
+✅ THÊM: Chốt theo NĂM (em bổ sung ngay)
+✅ Free tier trước, nâng cấp sau KHÔNG MẤT DATA (Supabase giữ 100% data khi upgrade)
+📊 BỔ SUNG: CHỐT THEO NĂM
+Cập nhật bảng chot_ky:
+sql
+-- Đã có sẵn, chỉ cần thêm query:-- Chốt tháng: WHERE loai = 'thang' AND ky = '01/2024'-- Chốt năm: WHERE loai = 'nam' AND ky = '2024'```### **Giao diện Chốt:**```📊 Báo cáo → Chốt sổ┌─────────────────────────────────┐│ 📅 Chọn kỳ chốt: ││ ○ Chốt tháng [01/2024] [▼] ││ ● Chốt năm [2024] [▼] ││ ││ [🔒 Chốt sổ ngay] │└─────────────────────────────────┘Sau khi chốt:┌─────────────────────────────────┐│ ✅ ĐÃ CHỐT NĂM 2024 ││ ││ 📥 Tổng nhập: 180.500.000 ││ 💰 Tổng bán: 210.300.000 ││ 💸 Lãi gộp: +29.800.000 ││ 📈 Tỷ suất lãi: 16.5% ││ ││ [📥 Tải báo cáo Excel] ││ [📧 Gửi email báo cáo] │└─────────────────────────────────┘
+Core (Bắt buộc):
+✅ Nhập hàng với auto-complete
+✅ Bán hàng với tính lãi realtime
+✅ Tồn kho với cảnh báo
+✅ Dashboard với 4 biểu đồ
+✅ Chốt tháng/năm tự động
+✅ Backup 3 lớp (Supabase + Sheets + Excel)
+✅ Mobile-first UI/UX
+✅ Offline mode

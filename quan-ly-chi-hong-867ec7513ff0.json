@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "quan-ly-chi-hong",
+  "private_key_id": "867ec7513ff011a572866470ce92f4b0ce7ae766",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7JOS0KfoMnYgh\n/yb2++D0MNyuLOWMDXudiynMa0wNZqopOqwXvg50D3y2cGgb75Bmj+8guVFO+Eci\n8RyOWMpCgdsYP3k5YTegLhEPkGWSND1/kudY5wu2Af5etl733igHuIcpeoVhxRHV\nXa6+t0ZO2U4CzojgQjyUtdZEi/lxQvVHRmWHid9G6ShJTGB+NdL7OYhcc5D50AAa\n0weTZhewMsTh0k+56t145V4z01uqUfjThMw3n7c0OVzJanXBlNUqxQsAPETTTas4\nTeGypqP+wqu44p7LiAWaIpvaLY+YyVG7VCQHDW7+15qKMUX/vwnUafD9GKgCL6Pe\n1gltDrg9AgMBAAECggEAKI8M3/0O+8fydofBbprVPKcQVNFXKHzNky3Tb8G7WFYt\nP8U/AeBHaqDmovWGorNPZOMB7OIs/IPzit+dlD4rC7HwBXfQMn7e2uDRAsIFOWQI\nBguVBx//2kDhW66Ds42auF2mMXejy7Y1sLvegOfgnXscHKCdapkAXyxvlSiO9Zww\n4TZd0Cm2ayTZwL9+iwwzLItzicJbxMzOCtWdRzhtwZ/NcWruvB4V8K7L/OhayBAi\nMtmXSaYeWsRe87uUq721lj4zUdjrp3Z2B/fUwn/ETLbg/NFiPg4MiS8fJLLRS+r6\nZ/VtPeVQx/ixrX1QWI8JE14nc2EMg3/rMA9p8pf3MQKBgQD/bcmYaKDdDH0bPbKW\nHYC+4yXeaH9pQOfM2rtr77B/UgvZuVgKHe/Z+Mks9YETtpesm9mkF3FwusX0GtPL\nadft37kBf1aflzKRFb6d6yORFiEInIEnpkqTqCp1UTwgkzT+/1jJNPyd/9axDK/8\naPqHFsncJsb+lw0Z33ToG62kCQKBgQC7kASzHvkKEjTPYmYHuIO5vJhaYicUqMrg\n4SGi2hnqaSwnPHopOJU5QFjP5MOshqQBtSmeJAfQBki+KFsypn6nE1JNLoY4A1so\nlREc0vmAnEeYkovtoCN4pVRhjEBL7OQU0u3Xpad5OXIpVgPj7avQ1tq5kH69tluw\nXIiAufIHlQKBgDNnX8u5Oq5hpgfGadtGArPnuKZCt2lyM3QJjPBS410sINBnOW2H\nys4+ABZ5LcnO1EVbc/hO83hxTgcrIvZrzZXEkVHY05D4d6e1DZBwUs8O+gTmoiNd\nluKSVEEZ4RTZKzAqKS8M583QP9+PoxcT9V8cWfFhKGjx8yQC0V8outApAoGACzl5\nLocB/FpOksKevIOMToc8ztvk3tWjHoYajzZiKqcUn1x9Kw5Zz81MA1T7aM297uQ6\nk14woYBexhKAMq3IEpOTb08DdUKuJ+WT2pe9mra/ih/rA9N7i/LI8/WCu4h3tc9R\nsIAXX6fSbyrYnMFScPMKr+Q30X6iShGfkaSPGWkCgYEAzPl7+K9O8+Gcu9VrVGvM\ndftn34cA0y37/Pxe0QXZhDfn81zXqSf/4gub41ravbRwEbV0C2/e+ysLF+/oaEgk\n9QmSgdHENxtM4lWi8XuVnd7k6exJnuMzDXtYpSgwApd3q145nQqvx2cG7w3mDgHz\nvEPmyMP5fHq+tq4SdTRDqhs=\n-----END PRIVATE KEY-----\n",
+  "client_email": "sheets-sync-bot@quan-ly-chi-hong.iam.gserviceaccount.com",
+  "client_id": "104316156451160789615",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sheets-sync-bot%40quan-ly-chi-hong.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

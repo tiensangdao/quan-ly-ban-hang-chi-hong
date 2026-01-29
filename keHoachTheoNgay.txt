@@ -1,0 +1,83 @@
+Dưới đây là lịch trình thực hiện chi tiết trong 10 ngày, tuân thủ nghiêm ngặt theo 5 giai đoạn đã đề ra trong kế hoạch của bạn:
+
+Giai đoạn 1: Nền tảng (Ngày 1 - Ngày 2) 
+
+Tập trung vào việc thiết lập môi trường và cấu trúc dữ liệu cốt lõi trên Supabase.
+
+Ngày 1: Thiết lập Database & Trình thông dịch:
+
+Khởi tạo Project trên Supabase và kết nối với Vercel.
+
+Chạy các câu lệnh SQL để tạo 4 bảng chính: products, nhap_hang, ban_hang, chot_ky.
+
+Thiết lập Trigger để tự động cập nhật giá nhập mới nhất vào bảng sản phẩm khi có đơn nhập hàng.
+
+Ngày 2: View & API:
+
+Tạo View inventory_balance để hệ thống tự động tính toán tồn kho theo thời gian thực từ các bảng nhập/bán.
+
+Cấu hình Google Sheets API để chuẩn bị cho việc đồng bộ dữ liệu sau này.
+
+Giai đoạn 2: Các chức năng cốt lõi (Ngày 3 - Ngày 5) 
+
+Xây dựng giao diện nhập liệu tối ưu cho điện thoại (One-handed UI).
+
+Ngày 3: Form Nhập hàng:
+
+Xây dựng form nhập hàng có tính năng tự động gợi ý tên sản phẩm (Auto-complete).
+
+Thiết lập bàn phím số tự động và logic tự tính Thành tiền ngay khi nhập đơn giá/số lượng.
+
+Ngày 4: Form Bán hàng & Logic tính lãi:
+
+Phát triển form bán hàng có khả năng tự lấy giá nhập gần nhất từ Database để tính lãi thực tế.
+
+Cài đặt cảnh báo tồn kho ngay trong lúc chị đang nhập số lượng bán.
+
+Ngày 5: Quản lý Tồn kho:
+
+Thiết kế trang xem tồn kho với hệ thống màu sắc: 🟢 Còn nhiều, 🟡 Sắp hết, 🔴 Hết hàng.
+
+Tối ưu giao diện Bottom Navigation để chị dễ dàng chuyển đổi các tab bằng một tay.
+
+Giai đoạn 3: Phân tích & Thống kê (Ngày 6 - Ngày 7) 
+
+Chuyển đổi dữ liệu thô thành các biểu đồ trực quan như trong sổ tay của chị.
+
+Ngày 6: Dashboard Tổng quan & Biểu đồ:
+
+Xây dựng Dashboard hiển thị Tổng chi, Doanh thu và Lãi gộp của tháng hiện tại.
+
+Triển khai biểu đồ Cột (Chi/Thu) và biểu đồ Tròn (Cơ cấu sản phẩm) bằng thư viện Recharts.
+
+Ngày 7: Xu hướng & Chốt kỳ:
+
+Làm biểu đồ Đường theo dõi xu hướng lãi và Heat Map để biết ngày nào bán chạy nhất.
+
+Xây dựng logic tự động chốt sổ theo Tháng và Năm để lưu vào bảng chot_ky.
+
+Giai đoạn 4: Sao lưu & Hoàn thiện (Ngày 8 - Ngày 9) 
+
+Triển khai hệ thống bảo vệ dữ liệu 3 lớp để đảm bảo không bao giờ mất data.
+
+Ngày 8: Đồng bộ Google Sheets & Excel:
+
+Viết code tự động Sync dữ liệu sang Google Sheets mỗi khi chị nhấn nút Lưu.
+
+Tích hợp tính năng xuất file Excel (.xlsx) thủ công để chị có thể tải về điện thoại bất cứ lúc nào.
+
+Ngày 9: Offline Mode & Thông báo:
+
+Cài đặt PWA để chị có thể "cài" web ra màn hình chính và Service Worker để nhập hàng khi không có mạng.
+
+Thiết lập gửi email báo cáo tình trạng dữ liệu hàng tuần.
+
+Giai đoạn 5: Tùy chỉnh (Ngày 10) 
+
+Xử lý các trường thông tin phát sinh (Custom Fields).
+
+Ngày 10: Quản lý JSONB:
+
+Xây dựng giao diện cho phép chị tự thêm các trường thông tin mới (như Mã lô hàng, Hạn sử dụng) mà không cần sửa code.
+
+Kiểm tra toàn bộ hệ thống và bàn giao cho chị Hồng.

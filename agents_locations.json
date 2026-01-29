@@ -1,0 +1,5 @@
+AGENTS_LOCATIONS = [
+  { path: ".", type: "root", reason: "Root is mandatory" },
+  { path: "app", score: 10, reason: "Next.js App Router core" },
+  { path: "lib", score: 8, reason: "Shared logic and DB client" }
+]

@@ -4,7 +4,7 @@ export const appendToSheet = async (values: any[]) => {
   try {
     // 1. Cấu hình xác thực
     const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
       undefined,
       // Xử lý lỗi định dạng xuống dòng của Private Key trên Vercel
       process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),

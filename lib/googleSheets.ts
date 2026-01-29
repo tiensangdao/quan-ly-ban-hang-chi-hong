@@ -1,3 +1,4 @@
+'use server'
 import { google } from 'googleapis';
 
 export const appendToSheet = async (values: any[]) => {

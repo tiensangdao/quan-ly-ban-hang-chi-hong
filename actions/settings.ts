@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import { appendToSheet } from '@/lib/googleSheets';
+import { setupYearSheet } from '@/lib/setupSheet';
 
 // Get settings from database
 export async function getSettings() {
@@ -179,7 +180,16 @@ export async function syncToGoogleSheets(year?: number) {
     const sheetName = `${targetYear}`; // Sheet name: "2025", "2026", etc.
 
     try {
-        // Write each row to Google Sheets (skip header if needed)
+        // Setup sheet structure first (headers, formulas, formatting)
+        console.log(`Setting up sheet "${sheetName}"...`);
+        const setupResult = await setupYearSheet(targetYear);
+        if (!setupResult.success) {
+            console.error('Setup sheet warning:', setupResult.error);
+            // Continue anyway - sheet might already exist
+        }
+
+        // Write each row to Google Sheets (skip header since setupYearSheet already created it)
+        console.log(`Writing ${rows.length - 1} rows to sheet "${sheetName}"...`);
         for (const row of rows.slice(1)) { // Skip header row
             const result = await appendToSheet(row, sheetName);
             if (!result.success) {

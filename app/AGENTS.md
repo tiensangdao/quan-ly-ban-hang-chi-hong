@@ -1,16 +1,13 @@
 # APP ROUTER KNOWLEDGE BASE
 
 ## OVERVIEW
-Core application logic using Next.js 16 App Router with Server-First architecture.
+Core application logic using Next.js 16 App Router.
 
 ## STRUCTURE
 ```
 app/
-├── (auth)/          # Auth-related routes (grouped)
-├── (dashboard)/     # Main application features
-├── api/             # Route Handlers (Server-side only)
-├── components/      # App-specific UI components
-├── layout.tsx       # Root layout & providers
+├── test-sheets/     # Integration test route for Google Sheets
+├── layout.tsx       # Root layout (Fonts, Metadata, Hydration fix)
 ├── page.tsx         # Landing page (Client Component)
 └── globals.css      # Tailwind v4 global styles
 ```
@@ -18,22 +15,16 @@ app/
 ## WHERE TO LOOK
 | Feature | File/Folder | Responsibility |
 |---------|-------------|----------------|
-| **Routing** | `app/**/page.tsx` | Defines unique routes |
-| **Layouts** | `app/**/layout.tsx` | Shared UI & state across routes |
-| **Loading** | `app/**/loading.tsx` | Instant loading states (Suspense) |
-| **Errors** | `app/**/error.tsx` | Error boundaries for segments |
-| **Metadata** | `layout.tsx` | SEO and document head config |
+| **Root Layout** | `layout.tsx` | Global styles, fonts, `suppressHydrationWarning`. |
+| **Home Page** | `page.tsx` | Main UI. Fetches data via Supabase client. |
+| **Integration Test** | `test-sheets/page.tsx` | Form to test Google Sheets sync. |
 
 ## CONVENTIONS
-- **Server Components**: Default. Use for data fetching (Supabase).
-- **Client Components**: Use `'use client'` ONLY for interactivity/hooks.
-- **Data Fetching**: Prefer Server Components + `async/await`.
-- **Route Groups**: Use `(folder)` to organize without affecting URL.
-- **Private Folders**: Use `_folder` to exclude from routing.
+- **Hydration**: `layout.tsx` uses `suppressHydrationWarning` to handle browser extension mismatches.
+- **Components**:
+  - `page.tsx` is Client Component (`'use client'`).
+  - `test-sheets/page.tsx` is Client Component calling Server Action.
 
 ## ANTI-PATTERNS
-- **NO** `'use client'` at the top of every file.
-- **NO** fetching data in Client Components if possible.
-- **NO** large component trees in `layout.tsx` (keep it lean).
-- **NO** direct use of `window` or `document` without checking.
-- **NO** mixing business logic with UI in `page.tsx`.
+- **NO** logic-heavy layouts.
+- **NO** direct database calls in Client Components (use Supabase client or Server Actions).

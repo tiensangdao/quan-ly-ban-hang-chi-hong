@@ -1,17 +1,16 @@
 # PROJECT KNOWLEDGE BASE
 
 **Generated:** 2026-01-30
-**Commit:** 8a62643
 **Branch:** main
 
 ## OVERVIEW
-Next.js 16 (App Router) e-commerce system for "Chị Hồng" using Supabase (PostgreSQL) and Tailwind CSS v4.
+Next.js 16 (App Router) e-commerce system for "Chị Hồng" using Supabase (PostgreSQL), Google Sheets Sync, and Tailwind CSS v4.
 
 ## STRUCTURE
 ```
 ./
 ├── app/             # Next.js App Router (pages, layouts)
-├── lib/             # Shared utilities (Supabase client)
+├── lib/             # Shared utilities (Supabase & Google Sheets)
 ├── public/          # Static assets
 └── next.config.ts   # Next.js config
 ```
@@ -22,12 +21,15 @@ Next.js 16 (App Router) e-commerce system for "Chị Hồng" using Supabase (Pos
 | **Pages** | `app/page.tsx` | Main entry point (Client Component) |
 | **Layout** | `app/layout.tsx` | Root layout + Global CSS + Fonts |
 | **Database** | `lib/supabase.ts` | Supabase client initialization |
+| **Sync** | `lib/googleSheets.ts` | Google Sheets Server Action |
+| **Sync** | `lib/googleSheets.ts` | Google Sheets API integration (Server Actions) |
 | **Styles** | `app/globals.css` | Global Tailwind directives |
 
 ## CONVENTIONS
 - **Imports**: Use `@/` alias (e.g., `@/lib/supabase`).
 - **Styling**: Tailwind CSS v4 utility classes only.
 - **Client Components**: Mark with `'use client'` at top.
+- **Server Actions**: Mark with `'use server'` at top of file (e.g., `lib/googleSheets.ts`).
 - **Strict Mode**: No `any` types allowed (fix pending).
 
 ## ANTI-PATTERNS (THIS PROJECT)
@@ -44,6 +46,6 @@ npm run lint     # Run ESLint
 ```
 
 ## NOTES
+- **Env**: Requires `.env.local` with Supabase keys AND Google Service Account keys.
+- **Auth**: Google Auth uses Base64 encoded private key for stability.
 - **Missing**: Middleware, API routes, Type definitions.
-- **Critical**: `lib/types.ts` needed for Supabase tables.
-- **Env**: Requires `.env.local` with Supabase keys.

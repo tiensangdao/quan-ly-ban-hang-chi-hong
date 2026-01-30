@@ -181,7 +181,7 @@ export async function syncToGoogleSheets(year?: number) {
     try {
         // Write each row to Google Sheets (skip header if needed)
         for (const row of rows.slice(1)) { // Skip header row
-            const result = await appendToSheet(row);
+            const result = await appendToSheet(row, sheetName);
             if (!result.success) {
                 console.error('Failed to append row:', result.error);
             }

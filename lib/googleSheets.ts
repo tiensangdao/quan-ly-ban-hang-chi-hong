@@ -1,7 +1,7 @@
 'use server'
 import { google } from 'googleapis';
 
-export const appendToSheet = async (values: any[]) => {
+export const appendToSheet = async (values: any[], sheetName: string = 'Tổng hợp') => {
   try {
     const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64; // Ưu tiên dùng key base64
@@ -32,7 +32,7 @@ export const appendToSheet = async (values: any[]) => {
 
     // Xử lý nốt nếu key sau khi decode vẫn còn dạng \n text (trường hợp hiếm)
     if (privateKey.includes('\\n')) {
-       privateKey = privateKey.replace(/\\n/g, '\n');
+      privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
     const auth = new google.auth.GoogleAuth({
@@ -44,7 +44,7 @@ export const appendToSheet = async (values: any[]) => {
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const range = "'Nhập hàng'!A:E"; 
+    const range = `'${sheetName}'!A:K`; // Dynamic sheet name, columns A-K (11 columns) 
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
     const response = await sheets.spreadsheets.values.append({

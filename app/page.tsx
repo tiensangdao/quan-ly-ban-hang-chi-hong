@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDateVietnamese, roundNumber } from '@/lib/utils';
+import { 
+  BarChart3, 
+  Calendar, 
+  ArrowDownToLine, 
+  TrendingUp, 
+  AlertTriangle, 
+  AlertCircle,
+  Package,
+  Sparkles,
+  Trophy
+} from 'lucide-react';
 
 interface Product {
   id: string;
@@ -231,35 +242,52 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-5 pb-24 flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Đang tải...</div>
+      <div className="p-5 pb-24 flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-blue-600 font-medium">Đang tải...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-5 pb-24 bg-gray-50 min-h-screen">
+    <div className="p-5 pb-24 bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">📊 KHO HÀNG - Hôm nay</h1>
-        <p className="text-sm text-gray-600 mt-1">📅 {getVietnameseDate()}</p>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-xl shadow-md">
+            <BarChart3 className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            KHO HÀNG - Hôm nay
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+          <Calendar className="w-4 h-4 text-blue-500" />
+          <span>{getVietnameseDate()}</span>
+        </div>
       </div>
 
       {(alerts.length > 0 || !hasImportedToday) && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-4">
-          <h2 className="text-lg font-bold text-red-900 mb-3">⚠️ CẢNH BÁO QUAN TRỌNG</h2>
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <h2 className="text-lg font-bold text-red-900">CẢNH BÁO QUAN TRỌNG</h2>
+          </div>
           <div className="space-y-3">
             {alerts.map((alert) => (
-              <div key={alert.product.id} className="bg-white rounded-lg p-3 border border-red-300">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+              <div key={alert.product.id} className="bg-white rounded-xl p-3 border border-red-200 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 flex-1">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div className="font-semibold text-red-700">
-                      🔴 {alert.product.ten_hang}:{' '}
+                      {alert.product.ten_hang}:{' '}
                       {alert.ton_kho === 0 ? 'Hết hàng' : `Còn ${alert.ton_kho} ${alert.product.don_vi}`}
                     </div>
                   </div>
                   <button
                     onClick={() => router.push('/nhap-hang')}
-                    className="ml-2 px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded hover:bg-red-700 transition-colors"
+                    className="ml-2 px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-sm"
                   >
                     Nhập ngay
                   </button>
@@ -268,16 +296,17 @@ export default function DashboardPage() {
             ))}
 
             {!hasImportedToday && (
-              <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-300">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="font-semibold text-yellow-700">
-                      🟡 Chưa nhập hàng hôm nay
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-300 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 flex-1">
+                    <Package className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
+                    <div className="font-semibold text-yellow-800">
+                      Chưa nhập hàng hôm nay
                     </div>
                   </div>
                   <button
                     onClick={() => router.push('/nhap-hang')}
-                    className="ml-2 px-3 py-1 bg-yellow-600 text-white text-sm font-semibold rounded hover:bg-yellow-700 transition-colors"
+                    className="ml-2 px-3 py-1.5 bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-sm font-semibold rounded-lg hover:from-yellow-700 hover:to-amber-700 transition-all shadow-sm"
                   >
                     Nhập hàng
                   </button>
@@ -288,75 +317,118 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">💰 HÔM NAY</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-700">📥 Nhập:</span>
+      <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-1.5 rounded-lg">
+            <Calendar className="w-4 h-4 text-white" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">HÔM NAY</h2>
+        </div>
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between items-center p-2.5 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <ArrowDownToLine className="w-4 h-4 text-blue-600" />
+              <span className="text-gray-700 font-medium">Nhập:</span>
+            </div>
             <span className="font-semibold text-gray-900">
               {formatCurrency(dailyStats.tong_nhap)} ({dailyStats.so_don_nhap} đơn)
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">💰 Bán:</span>
+          <div className="flex justify-between items-center p-2.5 bg-green-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-600" />
+              <span className="text-gray-700 font-medium">Bán:</span>
+            </div>
             <span className="font-semibold text-gray-900">
               {formatCurrency(dailyStats.tong_ban)} ({dailyStats.so_don_ban} đơn)
             </span>
           </div>
-          <div className="flex justify-between pt-2 border-t border-gray-200">
-            <span className="text-gray-700">💸 Lãi:</span>
-            <span className={`font-bold ${dailyStats.lai >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {dailyStats.lai >= 0 ? '+' : ''}{formatCurrency(dailyStats.lai)} {dailyStats.lai > 0 && '⭐'}
+          <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200 mt-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              <span className="text-gray-800 font-semibold">Lãi:</span>
+            </div>
+            <span className={`font-bold text-lg ${dailyStats.lai >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {dailyStats.lai >= 0 ? '+' : ''}{formatCurrency(dailyStats.lai)}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">📈 {getCurrentMonth().toUpperCase()}</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-700">📥 Chi nhập:</span>
+      <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-gradient-to-br from-purple-500 to-blue-600 p-1.5 rounded-lg">
+            <TrendingUp className="w-4 h-4 text-white" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">{getCurrentMonth().toUpperCase()}</h2>
+        </div>
+        <div className="space-y-2.5 text-sm">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <ArrowDownToLine className="w-4 h-4 text-blue-500" />
+              <span className="text-gray-700">Chi nhập:</span>
+            </div>
             <span className="font-semibold text-gray-900">{formatCurrency(monthlyStats.chi_nhap)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">💰 Doanh thu:</span>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-gray-700">Doanh thu:</span>
+            </div>
             <span className="font-semibold text-gray-900">{formatCurrency(monthlyStats.doanh_thu)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">💸 Lãi gộp:</span>
+          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              <span className="text-gray-800 font-medium">Lãi gộp:</span>
+            </div>
             <span className={`font-semibold ${monthlyStats.lai >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {monthlyStats.lai >= 0 ? '+' : ''}{formatCurrency(monthlyStats.lai)}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-700">📈 Tỷ lệ lãi:</span>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600" />
+              <span className="text-gray-700">Tỷ lệ lãi:</span>
+            </div>
             <span className="font-semibold text-blue-600">{monthlyStats.ty_le_lai}%</span>
           </div>
         </div>
       </div>
 
       {topProducts.length > 0 && (
-        <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">🏆 TOP BÁN TUẦN NÀY</h2>
-          <div className="space-y-3">
+        <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 rounded-lg">
+              <Trophy className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">TOP BÁN TUẦN NÀY</h2>
+          </div>
+          <div className="space-y-4">
             {topProducts.map((item, index) => {
               const maxQty = topProducts[0].so_luong;
               const percentage = (item.so_luong / maxQty) * 100;
+              const medalColors = ['from-amber-400 to-yellow-500', 'from-gray-300 to-gray-400', 'from-orange-400 to-amber-600'];
+              const bgColors = ['bg-amber-50', 'bg-gray-50', 'bg-orange-50'];
 
               return (
-                <div key={item.product.id}>
-                  <div className="flex justify-between items-center mb-1 text-sm">
-                    <span className="font-semibold text-gray-900">
-                      {index + 1}. {item.product.ten_hang}
-                    </span>
-                    <span className="text-gray-700">
+                <div key={item.product.id} className={`p-3 rounded-xl ${bgColors[index] || 'bg-blue-50'}`}>
+                  <div className="flex justify-between items-center mb-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className={`bg-gradient-to-br ${medalColors[index] || 'from-blue-400 to-blue-500'} w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm`}>
+                        {index + 1}
+                      </div>
+                      <span className="font-semibold text-gray-900">
+                        {item.product.ten_hang}
+                      </span>
+                    </div>
+                    <span className="text-gray-700 font-medium">
                       {item.so_luong} {item.product.don_vi}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-white rounded-full h-2.5 shadow-inner">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
+                      className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 h-2.5 rounded-full transition-all duration-500 shadow-sm"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
@@ -366,9 +438,9 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => router.push('/ton-kho')}
-            className="mt-4 w-full text-center text-blue-600 font-semibold text-sm hover:text-blue-700"
+            className="mt-4 w-full text-center py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md"
           >
-            [Xem tất cả →]
+            Xem tất cả →
           </button>
         </div>
       )}

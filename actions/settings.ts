@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
+import { appendToSheet } from '@/lib/googleSheets';
 
 // Get settings from database
 export async function getSettings() {
@@ -174,19 +175,38 @@ export async function syncToGoogleSheets(year?: number) {
         ]);
     });
 
-    // Update last_sync_sheets
-    await supabase
-        .from('app_settings')
-        .update({ last_sync_sheets: new Date().toISOString() })
-        .eq('id', 1);
+    // Actually write to Google Sheets using existing API
+    const sheetName = `${targetYear}`; // Sheet name: "2025", "2026", etc.
 
-    // Return data for Google Sheets API call (to be implemented)
-    return {
-        success: true,
-        sheetName: `Năm ${targetYear}`,
-        rows,
-        rowCount: rows.length - 1
-    };
+    try {
+        // Write each row to Google Sheets (skip header if needed)
+        for (const row of rows.slice(1)) { // Skip header row
+            const result = await appendToSheet(row);
+            if (!result.success) {
+                console.error('Failed to append row:', result.error);
+            }
+        }
+
+        // Update last_sync_sheets timestamp
+        await supabase
+            .from('app_settings')
+            .update({ last_sync_sheets: new Date().toISOString() })
+            .eq('id', 1);
+
+        return {
+            success: true,
+            sheetName,
+            rowCount: rows.length - 1
+        };
+    } catch (error: any) {
+        console.error('Google Sheets sync error:', error);
+        return {
+            success: false,
+            error: error.message,
+            sheetName,
+            rowCount: 0
+        };
+    }
 }
 
 // Export to Excel
@@ -283,12 +303,13 @@ export async function exportToExcel(period: 'month' | 'year' | 'all') {
     const ws = XLSX.utils.aoa_to_sheet(dataRows);
     XLSX.utils.book_append_sheet(wb, ws, 'Dữ liệu');
 
-    // Generate buffer
+    // Generate buffer and convert to base64 for client transfer
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+    const base64 = Buffer.from(excelBuffer).toString('base64');
 
     return {
         success: true,
         fileName,
-        buffer: excelBuffer
+        base64 // Return base64 instead of buffer
     };
 }

@@ -325,7 +325,7 @@ export async function writeYearSummaryTables(
                 requestBody: { values: typeRows }
             });
 
-            console.log(`✅ Type Stats từ row ${startRow} column H`);
+            console.log(`✅ Type Stats từ row ${startRow} column F`);
         }
 
         // 3. Write Full Inventory/Product Performance table (Below Top Products)
@@ -370,42 +370,6 @@ export async function writeYearSummaryTables(
 
             console.log(`✅ Detailed Stats từ row ${inventoryStartRow}`);
 
-            // Write Monthly Statistics table (below Inventory)
-            const monthlyStartRow = inventoryStartRow + inventoryRows.length + 5;
-            const monthlyHeader = [
-                ['📅 THỐNG KÊ THÁNG NĂM ' + year, '', '', '', '', ''],
-                ['Tháng', 'Tổng nhập', 'Tổng bán', 'Lợi nhuận']
-            ];
-
-            const monthlyRows = [];
-            for (let m = 1; m <= 12; m++) {
-                monthlyRows.push([
-                    `Tháng ${m}`,
-                    `=SUMIFS($H$2:$H${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m}, $C$2:$C${dataRowCount + 1}, "NHẬP")`,
-                    `=SUMIFS($H$2:$H${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m}, $C$2:$C${dataRowCount + 1}, "BÁN")`,
-                    `=SUMIFS($I$2:$I${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m})`
-                ]);
-            }
-            monthlyRows.push([
-                'Cả năm',
-                `=SUM(B${monthlyStartRow + 2}:B${monthlyStartRow + 13})`,
-                `=SUM(C${monthlyStartRow + 2}:C${monthlyStartRow + 13})`,
-                `=SUM(D${monthlyStartRow + 2}:D${monthlyStartRow + 13})`
-            ]);
-
-            await sheets.spreadsheets.values.update({
-                spreadsheetId,
-                range: `'${sheetName}'!A${monthlyStartRow}:D${monthlyStartRow + 1}`,
-                valueInputOption: 'RAW',
-                requestBody: { values: monthlyHeader }
-            });
-
-            await sheets.spreadsheets.values.update({
-                spreadsheetId,
-                range: `'${sheetName}'!A${monthlyStartRow + 2}:D${monthlyStartRow + 14}`,
-                valueInputOption: 'USER_ENTERED',
-                requestBody: { values: monthlyRows }
-            });
         }
 
         return { success: true };

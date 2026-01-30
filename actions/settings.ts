@@ -3,7 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import { appendToSheet } from '@/lib/googleSheets';
-import { setupYearSheet } from '@/lib/setupSheet';
+import { setupYearSheet, setupSummarySheet } from '@/lib/setupSheet';
 
 // Get settings from database
 export async function getSettings() {
@@ -202,6 +202,13 @@ export async function syncToGoogleSheets(year?: number) {
             .from('app_settings')
             .update({ last_sync_sheets: new Date().toISOString() })
             .eq('id', 1);
+
+        // Setup/update Tổng hợp sheet with aggregated summaries
+        console.log('Setting up "Tổng hợp" sheet...');
+        const summaryResult = await setupSummarySheet();
+        if (!summaryResult.success) {
+            console.error('Setup summary sheet warning:', summaryResult.error);
+        }
 
         return {
             success: true,

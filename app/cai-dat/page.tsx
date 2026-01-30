@@ -172,7 +172,7 @@ export default function CaiDatPage() {
                 {/* Google Sheets Sync */}
                 <div className="mb-4 pb-4 border-b border-gray-200">
                     <h3 className="font-semibold text-gray-900 mb-2">📊 Đồng bộ Google Sheets</h3>
-                    <p className="text-sm text-gray-600 mb-2">
+                    <p className="text-sm text-gray-900 mb-2">
                         Lần cuối: {settings?.last_sync_sheets
                             ? formatDateVietnamese(settings.last_sync_sheets)
                             : 'Chưa có'}
@@ -213,30 +213,6 @@ export default function CaiDatPage() {
                         </button>
                     </div>
                 </div>
-
-                {/* Email Settings */}
-                <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">📧 Email báo cáo tự động</h3>
-                    <input
-                        type="email"
-                        value={settings?.email_backup_address || ''}
-                        onChange={(e) => setSettings(prev => prev ? { ...prev, email_backup_address: e.target.value } : null)}
-                        placeholder="Email nhận"
-                        className="w-full px-3 py-2 border border-gray-300 rounded mb-2"
-                    />
-                    <select
-                        value={settings?.email_backup_frequency || 'weekly'}
-                        onChange={(e) => setSettings(prev => prev ? { ...prev, email_backup_frequency: e.target.value } : null)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded mb-2"
-                    >
-                        <option value="">Tắt</option>
-                        <option value="weekly">Hàng tuần</option>
-                        <option value="monthly">Hàng tháng</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mb-2">
-                        ⚠️ Chức năng email cần cấu hình Cron Job
-                    </p>
-                </div>
             </div>
 
             {/* Section 2: Product Management */}
@@ -248,7 +224,7 @@ export default function CaiDatPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="🔍 Tìm sản phẩm..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded mb-4"
+                    className="w-full px-3 py-2 border border-gray-300 rounded mb-4 placeholder:text-gray-500 text-gray-900"
                 />
 
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -264,7 +240,7 @@ export default function CaiDatPage() {
                                         className="sr-only peer"
                                     />
                                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                    <span className="ml-2 text-sm text-gray-700">
+                                    <span className="ml-2 text-sm text-gray-900 font-medium">
                                         {product.active ? '●Đang bán' : '○Ngừng bán'}
                                     </span>
                                 </label>
@@ -276,7 +252,7 @@ export default function CaiDatPage() {
                                         type="text"
                                         defaultValue={product.don_vi}
                                         placeholder="Đơn vị"
-                                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                                         onBlur={(e) => handleUpdateProduct(product.id, { don_vi: e.target.value })}
                                     />
                                     <div className="flex gap-2">
@@ -284,32 +260,32 @@ export default function CaiDatPage() {
                                             type="number"
                                             defaultValue={product.ty_le_lai_mac_dinh}
                                             placeholder="Lãi %"
-                                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                                             onBlur={(e) => handleUpdateProduct(product.id, { ty_le_lai_mac_dinh: parseInt(e.target.value) })}
                                         />
                                         <input
                                             type="number"
                                             defaultValue={product.nguong_canh_bao}
                                             placeholder="Cảnh báo"
-                                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded text-gray-900"
                                             onBlur={(e) => handleUpdateProduct(product.id, { nguong_canh_bao: parseInt(e.target.value) })}
                                         />
                                     </div>
                                     <button
                                         onClick={() => setEditingProduct(null)}
-                                        className="w-full px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded"
+                                        className="w-full px-3 py-1 bg-gray-300 text-gray-900 text-sm rounded"
                                     >
                                         Đóng
                                     </button>
                                 </div>
                             ) : (
                                 <div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-gray-900 font-medium">
                                         Đơn vị: {product.don_vi} | Lãi: {product.ty_le_lai_mac_dinh}% | Cảnh báo: {product.nguong_canh_bao}
                                     </p>
                                     <button
                                         onClick={() => setEditingProduct(product.id)}
-                                        className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+                                        className="mt-2 text-sm text-blue-700 hover:text-blue-800 font-medium"
                                     >
                                         Chỉnh sửa →
                                     </button>
@@ -326,26 +302,26 @@ export default function CaiDatPage() {
 
                 <div className="space-y-3">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        <label className="block text-sm font-bold text-gray-900 mb-1">
                             💰 Tỷ lệ lãi mặc định (%)
                         </label>
                         <input
                             type="number"
                             value={settings?.ty_le_lai_mac_dinh || 30}
                             onChange={(e) => setSettings(prev => prev ? { ...prev, ty_le_lai_mac_dinh: parseInt(e.target.value) } : null)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded"
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 font-medium"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        <label className="block text-sm font-bold text-gray-900 mb-1">
                             ⚠️ Cảnh báo tồn kho mặc định (đơn vị)
                         </label>
                         <input
                             type="number"
                             value={settings?.nguong_canh_bao_mac_dinh || 10}
                             onChange={(e) => setSettings(prev => prev ? { ...prev, nguong_canh_bao_mac_dinh: parseInt(e.target.value) } : null)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded"
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 font-medium"
                         />
                     </div>
 
@@ -357,7 +333,7 @@ export default function CaiDatPage() {
                                 onChange={(e) => setSettings(prev => prev ? { ...prev, reminder_nhap_hang: e.target.checked } : null)}
                                 className="w-4 h-4 text-blue-600 rounded"
                             />
-                            <span className="text-sm text-gray-700">Nhắc nhập hàng (9h sáng)</span>
+                            <span className="text-sm text-gray-900 font-medium">Nhắc nhập hàng (9h sáng)</span>
                         </label>
                     </div>
 
@@ -369,7 +345,7 @@ export default function CaiDatPage() {
                                 onChange={(e) => setSettings(prev => prev ? { ...prev, reminder_het_hang: e.target.checked } : null)}
                                 className="w-4 h-4 text-blue-600 rounded"
                             />
-                            <span className="text-sm text-gray-700">Cảnh báo hết hàng</span>
+                            <span className="text-sm text-gray-900 font-medium">Cảnh báo hết hàng</span>
                         </label>
                     </div>
 
@@ -386,27 +362,27 @@ export default function CaiDatPage() {
             <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-200">
                 <h2 className="text-lg font-bold text-gray-900 mb-4">ℹ️ Thông tin hệ thống</h2>
 
-                <div className="space-y-2 text-sm">
-                    <p className="flex justify-between">
-                        <span className="text-gray-700">Sản phẩm:</span>
-                        <span className="font-semibold">{systemStats?.products || 0}</span>
+                <div className="space-y-2 text-sm text-gray-900 font-medium">
+                    <p className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>Sản phẩm:</span>
+                        <span className="font-bold text-lg">{systemStats?.products || 0}</span>
                     </p>
-                    <p className="flex justify-between">
-                        <span className="text-gray-700">Đơn nhập:</span>
-                        <span className="font-semibold">{systemStats?.nhap_hang?.toLocaleString() || 0}</span>
+                    <p className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>Đơn nhập:</span>
+                        <span className="font-bold text-lg">{systemStats?.nhap_hang?.toLocaleString() || 0}</span>
                     </p>
-                    <p className="flex justify-between">
-                        <span className="text-gray-700">Đơn bán:</span>
-                        <span className="font-semibold">{systemStats?.ban_hang?.toLocaleString() || 0}</span>
+                    <p className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>Đơn bán:</span>
+                        <span className="font-bold text-lg">{systemStats?.ban_hang?.toLocaleString() || 0}</span>
                     </p>
-                    <p className="flex justify-between">
-                        <span className="text-gray-700">Dung lượng:</span>
-                        <span className="font-semibold">{systemStats?.storage?.toFixed(2) || 0}MB</span>
+                    <p className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>Dung lượng:</span>
+                        <span className="font-bold text-lg">{systemStats?.storage ? (systemStats.storage / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'}</span>
                     </p>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-600">Phiên bản: 1.0</p>
+                    <p className="flex justify-between pt-1">
+                        <span>Phiên bản:</span>
+                        <span className="font-bold">1.0</span>
+                    </p>
                 </div>
             </div>
         </div>

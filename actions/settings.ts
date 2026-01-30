@@ -2,8 +2,8 @@
 
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
-import { appendToSheet } from '@/lib/googleSheets';
-import { setupYearSheet, setupSummarySheet } from '@/lib/setupSheet';
+import { appendToSheet, clearSheet } from '@/lib/googleSheets';
+import { setupYearSheet, setupSummarySheet, writeYearSummaryTables } from '@/lib/setupSheet';
 
 // Get settings from database
 export async function getSettings() {
@@ -159,11 +159,14 @@ export async function syncToGoogleSheets(year?: number) {
     // Sort by date
     allData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Format rows
+    // Format rows (12 columns including Tháng - calculated server-side)
     allData.forEach((item, index) => {
+        const dateObj = new Date(item.date);
+        const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
+
         rows.push([
             index + 1,
-            new Date(item.date).toLocaleDateString('vi-VN'),
+            dateObj.toLocaleDateString('vi-VN'),
             item.type,
             item.product,
             item.unit,
@@ -172,24 +175,79 @@ export async function syncToGoogleSheets(year?: number) {
             item.total,
             item.profit,
             item.partner,
-            item.note
+            item.note,
+            month // Tháng column - calculated server-side
         ]);
     });
+
+    // Calculate Top Products (Top BÁN by quantity)
+    const productSales: { [key: string]: { unit: string; quantity: number; revenue: number; profit: number } } = {};
+    allData.filter(item => item.type === 'BÁN').forEach(item => {
+        const key = item.product;
+        if (!productSales[key]) {
+            productSales[key] = { unit: item.unit, quantity: 0, revenue: 0, profit: 0 };
+        }
+        productSales[key].quantity += item.quantity || 0;
+        productSales[key].revenue += item.total || 0;
+        productSales[key].profit += item.profit || 0;
+    });
+
+    const topProducts = Object.entries(productSales)
+        .map(([product, data]) => ({
+            product,
+            unit: data.unit,
+            quantity: data.quantity,
+            revenue: data.revenue,
+            profit: data.profit
+        }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 10);
+
+    // Calculate Inventory (Tồn kho = Nhập - Bán)
+    const inventoryMap: { [key: string]: { unit: string; totalIn: number; totalOut: number; lastPrice: number } } = {};
+    allData.forEach(item => {
+        const key = item.product;
+        if (!inventoryMap[key]) {
+            inventoryMap[key] = { unit: item.unit, totalIn: 0, totalOut: 0, lastPrice: 0 };
+        }
+        if (item.type === 'NHẬP') {
+            inventoryMap[key].totalIn += item.quantity || 0;
+            inventoryMap[key].lastPrice = item.price || 0; // Giá nhập gần nhất
+        } else if (item.type === 'BÁN') {
+            inventoryMap[key].totalOut += item.quantity || 0;
+        }
+    });
+
+    const inventory = Object.entries(inventoryMap)
+        .map(([product, data]) => ({
+            product,
+            unit: data.unit,
+            totalIn: data.totalIn,
+            totalOut: data.totalOut,
+            stock: data.totalIn - data.totalOut,
+            value: (data.totalIn - data.totalOut) * data.lastPrice
+        }))
+        .filter(item => item.stock > 0) // Chỉ hiển thị sản phẩm còn tồn
+        .sort((a, b) => b.stock - a.stock);
 
     // Actually write to Google Sheets using existing API
     const sheetName = `${targetYear}`; // Sheet name: "2025", "2026", etc.
 
     try {
-        // Setup sheet structure first (headers, formulas, formatting)
+        // 1. Setup sheet structure (header, formatting only)
         console.log(`Setting up sheet "${sheetName}"...`);
         const setupResult = await setupYearSheet(targetYear);
         if (!setupResult.success) {
             console.error('Setup sheet warning:', setupResult.error);
-            // Continue anyway - sheet might already exist
         }
 
-        // Write each row to Google Sheets (skip header since setupYearSheet already created it)
-        console.log(`Writing ${rows.length - 1} rows to sheet "${sheetName}"...`);
+        // 2. Clear existing data to prevent duplicates on re-sync
+        console.log(`Clearing old data in sheet "${sheetName}"...`);
+        await clearSheet(sheetName);
+
+        // 3. Write data rows
+        const dataRowCount = rows.length - 1; // Exclude header
+        console.log(`Writing ${dataRowCount} rows to sheet "${sheetName}"...`);
         for (const row of rows.slice(1)) { // Skip header row
             const result = await appendToSheet(row, sheetName);
             if (!result.success) {
@@ -197,15 +255,38 @@ export async function syncToGoogleSheets(year?: number) {
             }
         }
 
+        // 4. Write Top Products and Inventory tables AFTER data
+        console.log(`Writing summary tables to sheet "${sheetName}"...`);
+        await writeYearSummaryTables(targetYear, topProducts, inventory, dataRowCount);
+
         // Update last_sync_sheets timestamp
         await supabase
             .from('app_settings')
             .update({ last_sync_sheets: new Date().toISOString() })
             .eq('id', 1);
 
-        // Setup/update Tổng hợp sheet with aggregated summaries
-        console.log('Setting up "Tổng hợp" sheet...');
-        const summaryResult = await setupSummarySheet();
+        // Calculate monthly summaries from allData
+        const monthlyData: { month: number; nhap: number; ban: number; lai: number }[] = [];
+        for (let month = 1; month <= 12; month++) {
+            const monthItems = allData.filter(item => {
+                const d = new Date(item.date);
+                return d.getMonth() + 1 === month && d.getFullYear() === targetYear;
+            });
+
+            const nhap = monthItems
+                .filter(i => i.type === 'NHẬP')
+                .reduce((sum, i) => sum + (i.total || 0), 0);
+            const ban = monthItems
+                .filter(i => i.type === 'BÁN')
+                .reduce((sum, i) => sum + (i.total || 0), 0);
+            const lai = monthItems.reduce((sum, i) => sum + (i.profit || 0), 0);
+
+            monthlyData.push({ month, nhap, ban, lai });
+        }
+
+        // Setup/update Tổng hợp sheet with calculated summaries
+        console.log('Setting up "Tổng hợp" sheet with monthly data...');
+        const summaryResult = await setupSummarySheet(monthlyData);
         if (!summaryResult.success) {
             console.error('Setup summary sheet warning:', summaryResult.error);
         }

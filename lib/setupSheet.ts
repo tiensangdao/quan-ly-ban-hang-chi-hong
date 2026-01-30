@@ -1,8 +1,31 @@
 'use server';
 import { google } from 'googleapis';
 
+// Types for additional tables
+interface TopProduct {
+    product: string;
+    unit: string;
+    quantity: number;
+    revenue: number;
+    profit: number;
+}
+
+interface InventoryItem {
+    product: string;
+    unit: string;
+    totalIn: number;
+    totalOut: number;
+    stock: number;
+    value: number;
+}
+
 // Setup complete sheet structure with formulas and formatting
-export async function setupYearSheet(year: number) {
+export async function setupYearSheet(
+    year: number,
+    topProducts?: TopProduct[],
+    inventory?: InventoryItem[],
+    dataRowCount?: number // Number of data rows (excluding header)
+) {
     try {
         const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
         const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64;
@@ -74,26 +97,9 @@ export async function setupYearSheet(year: number) {
             }
         });
 
-        // 3. ADD FORMULAS TO DATA COLUMNS
-        // Column H (Thành tiền) = Số lượng * Đơn giá
-        await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range: `'${sheetName}'!H2`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [['=IF(F2="","",F2*G2)']]
-            }
-        });
 
-        // Column L (Tháng) = MONTH(Ngày)
-        await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range: `'${sheetName}'!L2`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [['=IF(B2="","",MONTH(B2))']]
-            }
-        });
+        // Formulas removed - values are now calculated server-side
+
         const sheetId = await getSheetId(sheets, spreadsheetId!, sheetName);
 
         const formatRequests = [
@@ -207,15 +213,131 @@ export async function setupYearSheet(year: number) {
             }
         });
 
-
-
         return {
             success: true,
-            message: `Sheet "${sheetName}" đã được setup với đầy đủ bảng tổng hợp, công thức và màu sắc!`
+            message: `Sheet "${sheetName}" đã được setup header và formatting!`
         };
 
     } catch (error: any) {
         console.error('Setup sheet error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Write Top Products and Inventory tables AFTER data is written
+export async function writeYearSummaryTables(
+    year: number,
+    topProducts: { product: string; unit: string; quantity: number; revenue: number; profit: number }[],
+    inventory: { product: string; unit: string; totalIn: number; totalOut: number; stock: number; value: number }[],
+    dataRowCount: number
+) {
+    try {
+        const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+        const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64;
+        const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+        if (!clientEmail) throw new Error('Thiếu GOOGLE_SERVICE_ACCOUNT_EMAIL');
+
+        let privateKey = '';
+        if (base64Key) {
+            privateKey = atob(base64Key);
+        } else if (rawPrivateKey) {
+            privateKey = rawPrivateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
+        }
+
+        if (!privateKey) throw new Error('Không tìm thấy Private Key');
+        if (privateKey.includes('\\n')) {
+            privateKey = privateKey.replace(/\\n/g, '\n');
+        }
+
+        const auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: clientEmail,
+                private_key: privateKey,
+            },
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+
+        const sheets = google.sheets({ version: 'v4', auth });
+        const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+        const sheetName = `${year}`;
+
+        // Start row for Top Products (2 rows below data)
+        const startRow = dataRowCount + 3; // +1 header +2 gap
+
+        // Write Top Products table
+        if (topProducts && topProducts.length > 0) {
+            const topProductsHeader = [
+                [`🏆 TOP SẢN PHẨM BÁN CHẠY NĂM ${year}`, '', '', '', ''],
+                ['STT', 'Sản phẩm', 'Số lượng', 'Doanh thu', 'Lãi']
+            ];
+
+            const topProductsRows = topProducts.slice(0, 10).map((p, i) => [
+                i + 1,
+                p.product,
+                `${p.quantity} ${p.unit}`,
+                p.revenue,
+                p.profit
+            ]);
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${startRow}:E${startRow + 1}`,
+                valueInputOption: 'RAW',
+                requestBody: { values: topProductsHeader }
+            });
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${startRow + 2}:E${startRow + 2 + topProductsRows.length - 1}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: topProductsRows }
+            });
+
+            console.log(`✅ Top Products từ row ${startRow}`);
+        }
+
+        // Write Inventory table (below Top Products)
+        if (inventory && inventory.length > 0) {
+            const topProductsCount = topProducts?.length || 0;
+            const inventoryStartRow = startRow + topProductsCount + 5;
+
+            const inventoryHeader = [
+                ['📦 TỒN KHO HIỆN TẠI', '', '', '', '', '', ''],
+                ['STT', 'Sản phẩm', 'Đơn vị', 'Tổng nhập', 'Tổng bán', 'Tồn kho', 'Giá trị']
+            ];
+
+            const inventoryRows = inventory.map((item, index) => [
+                index + 1,
+                item.product,
+                item.unit,
+                item.totalIn,
+                item.totalOut,
+                item.stock,
+                item.value
+            ]);
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${inventoryStartRow}:G${inventoryStartRow + 1}`,
+                valueInputOption: 'RAW',
+                requestBody: { values: inventoryHeader }
+            });
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${inventoryStartRow + 2}:G${inventoryStartRow + 2 + inventoryRows.length - 1}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: inventoryRows }
+            });
+
+            console.log(`✅ Inventory từ row ${inventoryStartRow}`);
+        }
+
+        return { success: true };
+
+    } catch (error: any) {
+        console.error('Write summary tables error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -233,8 +355,8 @@ async function getSheetId(sheets: any, spreadsheetId: string, sheetName: string)
     return sheet.properties.sheetId;
 }
 
-// Setup "Tổng hợp" sheet with summary tables aggregating all years
-export async function setupSummarySheet() {
+// Setup "Tổng hợp" sheet with pre-calculated summary data
+export async function setupSummarySheet(monthlyData?: { month: number; nhap: number; ban: number; lai: number }[]) {
     try {
         const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
         const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64;
@@ -294,27 +416,40 @@ export async function setupSummarySheet() {
             range: `'${sheetName}'!A1:O500`
         });
 
-        // 2. ADD MONTHLY SUMMARY TABLE (Rows 1-16)
+        // 2. ADD MONTHLY SUMMARY TABLE with pre-calculated values
         const currentYear = new Date().getFullYear();
         const summaryHeaders = [
             ['📊 TỔNG HỢP NĂM ' + currentYear, '', '', ''],
             ['Tháng', 'Tổng nhập', 'Tổng bán', 'Lãi']
         ];
 
+        // Use provided monthly data or default to zeros
         const summaryRows = [];
+        let totalNhap = 0, totalBan = 0, totalLai = 0;
+
         for (let month = 1; month <= 12; month++) {
+            const data = monthlyData?.find(d => d.month === month);
+            const nhap = data?.nhap || 0;
+            const ban = data?.ban || 0;
+            const lai = data?.lai || 0;
+
+            totalNhap += nhap;
+            totalBan += ban;
+            totalLai += lai;
+
             summaryRows.push([
                 `Tháng ${month}`,
-                `=SUMIFS('${currentYear}'!$H:$H,'${currentYear}'!$C:$C,"NHẬP",'${currentYear}'!$L:$L,${month})`,
-                `=SUMIFS('${currentYear}'!$H:$H,'${currentYear}'!$C:$C,"BÁN",'${currentYear}'!$L:$L,${month})`,
-                `=SUMIFS('${currentYear}'!$I:$I,'${currentYear}'!$L:$L,${month})`
+                nhap > 0 ? nhap : '',
+                ban > 0 ? ban : '',
+                lai > 0 ? lai : ''
             ]);
         }
+
         summaryRows.push([
             'TỔNG NĂM',
-            `=SUM(B3:B14)`,
-            `=SUM(C3:C14)`,
-            `=SUM(D3:D14)`
+            totalNhap > 0 ? totalNhap : '',
+            totalBan > 0 ? totalBan : '',
+            totalLai > 0 ? totalLai : ''
         ]);
 
         await sheets.spreadsheets.values.update({
@@ -368,7 +503,7 @@ export async function setupSummarySheet() {
 
         return {
             success: true,
-            message: `Sheet "Tổng hợp" đã được setup với bảng summary!`
+            message: `Sheet "Tổng hợp" đã được cập nhật với dữ liệu tháng!`
         };
 
     } catch (error: any) {

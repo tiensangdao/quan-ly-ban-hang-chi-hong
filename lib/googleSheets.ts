@@ -1,50 +1,69 @@
 'use server'
 import { google } from 'googleapis';
 
-export const appendToSheet = async (values: any[], sheetName: string = 'Tổng hợp') => {
+// Helper function to get auth
+async function getGoogleAuth() {
+  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64;
+  const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!clientEmail) throw new Error('Thiếu GOOGLE_SERVICE_ACCOUNT_EMAIL');
+
+  let privateKey = '';
+
+  if (base64Key) {
+    try {
+      privateKey = atob(base64Key);
+    } catch (e) {
+      console.error('❌ Lỗi giải mã Base64:', e);
+    }
+  }
+
+  if (!privateKey && rawPrivateKey) {
+    privateKey = rawPrivateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
+  }
+
+  if (!privateKey) throw new Error('Không tìm thấy Private Key hợp lệ');
+
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
+
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: clientEmail,
+      private_key: privateKey,
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+}
+
+// Clear all data in a sheet (except header row 1)
+export const clearSheet = async (sheetName: string) => {
   try {
-    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64; // Ưu tiên dùng key base64
-    const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+    const auth = await getGoogleAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    if (!clientEmail) throw new Error('Thiếu GOOGLE_SERVICE_ACCOUNT_EMAIL');
-
-    let privateKey = '';
-
-    // CÁCH 1: GIẢI MÃ BASE64 (Ưu tiên số 1 - An toàn tuyệt đối)
-    if (base64Key) {
-      try {
-        const decoded = atob(base64Key); // Giải mã base64
-        privateKey = decoded;
-        console.log('✅ Sử dụng khóa Base64 thành công');
-      } catch (e) {
-        console.error('❌ Lỗi giải mã Base64:', e);
-      }
-    }
-
-    // CÁCH 2: FALLBACK VỀ CÁCH CŨ (Nếu không có base64)
-    if (!privateKey && rawPrivateKey) {
-      privateKey = rawPrivateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
-      console.log('⚠️ Đang dùng khóa dạng Raw Text (dễ lỗi)');
-    }
-
-    if (!privateKey) throw new Error('Không tìm thấy Private Key hợp lệ (Base64 hoặc Raw)');
-
-    // Xử lý nốt nếu key sau khi decode vẫn còn dạng \n text (trường hợp hiếm)
-    if (privateKey.includes('\\n')) {
-      privateKey = privateKey.replace(/\\n/g, '\n');
-    }
-
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: clientEmail,
-        private_key: privateKey,
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    // Clear from row 2 onwards (keep header)
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: `'${sheetName}'!A2:L1000`
     });
 
+    console.log(`✅ Đã xóa dữ liệu cũ trong sheet "${sheetName}"`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Lỗi xóa sheet:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+export const appendToSheet = async (values: any[], sheetName: string = 'Tổng hợp') => {
+  try {
+    const auth = await getGoogleAuth();
     const sheets = google.sheets({ version: 'v4', auth });
-    const range = `'${sheetName}'!A:K`; // Dynamic sheet name, columns A-K (11 columns) 
+    const range = `'${sheetName}'!A:L`; // Columns A-L (12 columns including Tháng)
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
     const response = await sheets.spreadsheets.values.append({

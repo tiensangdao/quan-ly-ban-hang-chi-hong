@@ -1,29 +1,57 @@
 'use server'
 import { google } from 'googleapis';
-import credentials from './google-key.json'; // Import trực tiếp file JSON
 
 export const appendToSheet = async (values: any[]) => {
   try {
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const base64Key = process.env.GOOGLE_PRIVATE_KEY_BASE64; // Ưu tiên dùng key base64
+    const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+    if (!clientEmail) throw new Error('Thiếu GOOGLE_SERVICE_ACCOUNT_EMAIL');
+
+    let privateKey = '';
+
+    // CÁCH 1: GIẢI MÃ BASE64 (Ưu tiên số 1 - An toàn tuyệt đối)
+    if (base64Key) {
+      try {
+        const decoded = atob(base64Key); // Giải mã base64
+        privateKey = decoded;
+        console.log('✅ Sử dụng khóa Base64 thành công');
+      } catch (e) {
+        console.error('❌ Lỗi giải mã Base64:', e);
+      }
+    }
+
+    // CÁCH 2: FALLBACK VỀ CÁCH CŨ (Nếu không có base64)
+    if (!privateKey && rawPrivateKey) {
+      privateKey = rawPrivateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
+      console.log('⚠️ Đang dùng khóa dạng Raw Text (dễ lỗi)');
+    }
+
+    if (!privateKey) throw new Error('Không tìm thấy Private Key hợp lệ (Base64 hoặc Raw)');
+
+    // Xử lý nốt nếu key sau khi decode vẫn còn dạng \n text (trường hợp hiếm)
+    if (privateKey.includes('\\n')) {
+       privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: credentials.client_email,
-        private_key: credentials.private_key, // JSON tự xử lý \n chuẩn 100%
+        client_email: clientEmail,
+        private_key: privateKey,
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    
-    // Lưu ý: Nếu tên sheet có khoảng trắng, nên bao quanh bằng dấu nháy đơn '...'
     const range = "'Nhập hàng'!A:E"; 
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
     const response = await sheets.spreadsheets.values.append({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID, // Vẫn lấy ID từ env
+      spreadsheetId: spreadsheetId,
       range: range,
       valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [values],
-      },
+      requestBody: { values: [values] },
     });
 
     return { success: true, data: response.data };

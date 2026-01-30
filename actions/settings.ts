@@ -203,18 +203,44 @@ export async function syncToGoogleSheets(year?: number) {
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10);
 
-    // Calculate Inventory (Tồn kho = Nhập - Bán)
-    const inventoryMap: { [key: string]: { unit: string; totalIn: number; totalOut: number; lastPrice: number } } = {};
+    // Calculate Type Stats (Import vs Export)
+    const typeStatsMap = {
+        'NHẬP': { count: 0, total: 0 },
+        'BÁN': { count: 0, total: 0 }
+    };
+
+    allData.forEach(item => {
+        if (item.type === 'NHẬP') {
+            typeStatsMap['NHẬP'].count++;
+            typeStatsMap['NHẬP'].total += item.total || 0;
+        } else if (item.type === 'BÁN') {
+            typeStatsMap['BÁN'].count++;
+            typeStatsMap['BÁN'].total += item.total || 0;
+        }
+    });
+
+    const typeStats = [
+        { type: 'NHẬP', count: typeStatsMap['NHẬP'].count, total: typeStatsMap['NHẬP'].total },
+        { type: 'BÁN', count: typeStatsMap['BÁN'].count, total: typeStatsMap['BÁN'].total }
+    ];
+
+    // Calculate Inventory / Product Performance (All products involved in transactions)
+    const inventoryMap: { [key: string]: { unit: string; totalIn: number; totalOut: number; lastPrice: number; revenue: number; profit: number } } = {};
+
     allData.forEach(item => {
         const key = item.product;
+        if (!key) return; // Skip empty product names
+
         if (!inventoryMap[key]) {
-            inventoryMap[key] = { unit: item.unit, totalIn: 0, totalOut: 0, lastPrice: 0 };
+            inventoryMap[key] = { unit: item.unit, totalIn: 0, totalOut: 0, lastPrice: 0, revenue: 0, profit: 0 };
         }
         if (item.type === 'NHẬP') {
             inventoryMap[key].totalIn += item.quantity || 0;
             inventoryMap[key].lastPrice = item.price || 0; // Giá nhập gần nhất
         } else if (item.type === 'BÁN') {
             inventoryMap[key].totalOut += item.quantity || 0;
+            inventoryMap[key].revenue += item.total || 0;
+            inventoryMap[key].profit += item.profit || 0;
         }
     });
 
@@ -225,10 +251,13 @@ export async function syncToGoogleSheets(year?: number) {
             totalIn: data.totalIn,
             totalOut: data.totalOut,
             stock: data.totalIn - data.totalOut,
-            value: (data.totalIn - data.totalOut) * data.lastPrice
+            value: (data.totalIn - data.totalOut) * data.lastPrice,
+            revenue: data.revenue,
+            profit: data.profit
         }))
-        .filter(item => item.stock > 0) // Chỉ hiển thị sản phẩm còn tồn
-        .sort((a, b) => b.stock - a.stock);
+        // Filter out items with no interaction? No, all items here have interactions.
+        // Maybe sort by Revenue or Profit or Stock? Let's sort by Stock desc, then Profit desc
+        .sort((a, b) => b.stock - a.stock || b.profit - a.profit);
 
     // Actually write to Google Sheets using existing API
     const sheetName = `${targetYear}`; // Sheet name: "2025", "2026", etc.
@@ -257,7 +286,7 @@ export async function syncToGoogleSheets(year?: number) {
 
         // 4. Write Top Products and Inventory tables AFTER data
         console.log(`Writing summary tables to sheet "${sheetName}"...`);
-        await writeYearSummaryTables(targetYear, topProducts, inventory, dataRowCount);
+        await writeYearSummaryTables(targetYear, topProducts, inventory, typeStats, dataRowCount);
 
         // Update last_sync_sheets timestamp
         await supabase

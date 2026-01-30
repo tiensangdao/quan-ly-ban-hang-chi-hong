@@ -224,11 +224,12 @@ export async function setupYearSheet(
     }
 }
 
-// Write Top Products and Inventory tables AFTER data is written
+// Write Top Products, Type Stats, and Inventory tables AFTER data is written
 export async function writeYearSummaryTables(
     year: number,
     topProducts: { product: string; unit: string; quantity: number; revenue: number; profit: number }[],
-    inventory: { product: string; unit: string; totalIn: number; totalOut: number; stock: number; value: number }[],
+    inventory: { product: string; unit: string; totalIn: number; totalOut: number; stock: number; value: number; revenue?: number; profit?: number }[],
+    typeStats: { type: string; count: number; total: number }[],
     dataRowCount: number
 ) {
     try {
@@ -265,7 +266,7 @@ export async function writeYearSummaryTables(
         // Start row for Top Products (2 rows below data)
         const startRow = dataRowCount + 3; // +1 header +2 gap
 
-        // Write Top Products table
+        // 1. Write Top Products table (Left side: A-E)
         if (topProducts && topProducts.length > 0) {
             const topProductsHeader = [
                 [`🏆 TOP SẢN PHẨM BÁN CHẠY NĂM ${year}`, '', '', '', ''],
@@ -297,14 +298,48 @@ export async function writeYearSummaryTables(
             console.log(`✅ Top Products từ row ${startRow}`);
         }
 
-        // Write Inventory table (below Top Products)
+        // 2. Write Type Stats table (Right side of Top Products: G-I)
+        if (typeStats && typeStats.length > 0) {
+            const typeHeader = [
+                ['📊 THỐNG KÊ THEO LOẠI', '', ''],
+                ['Loại', 'Số đơn', 'Tổng tiền']
+            ];
+
+            const typeRows = typeStats.map(t => [
+                t.type,
+                t.count,
+                t.total
+            ]);
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!H${startRow}:J${startRow + 1}`,
+                valueInputOption: 'RAW',
+                requestBody: { values: typeHeader }
+            });
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!H${startRow + 2}:J${startRow + 2 + typeRows.length - 1}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: typeRows }
+            });
+
+            console.log(`✅ Type Stats từ row ${startRow} column H`);
+        }
+
+        // 3. Write Full Inventory/Product Performance table (Below Top Products)
+        // Includes Stock + Revenue + Profit
         if (inventory && inventory.length > 0) {
             const topProductsCount = topProducts?.length || 0;
-            const inventoryStartRow = startRow + topProductsCount + 5;
+            // Gap depends on which table is longer (Top Products or Type Stats).
+            // Type Stats is only 2 rows + header. Top products is 10 rows.
+            // So we can stick to using topProductsCount for row calculation.
+            const inventoryStartRow = startRow + (topProductsCount > 5 ? topProductsCount : 5) + 5;
 
             const inventoryHeader = [
-                ['📦 TỒN KHO HIỆN TẠI', '', '', '', '', '', ''],
-                ['STT', 'Sản phẩm', 'Đơn vị', 'Tổng nhập', 'Tổng bán', 'Tồn kho', 'Giá trị']
+                ['📦 THỐNG KÊ CHI TIẾT SẢN PHẨM', '', '', '', '', '', '', '', ''],
+                ['STT', 'Sản phẩm', 'Đơn vị', 'Tổng nhập', 'Tổng bán', 'Tồn kho', 'Giá trị tồn', 'Doanh thu', 'Lợi nhuận']
             ];
 
             const inventoryRows = inventory.map((item, index) => [
@@ -314,24 +349,63 @@ export async function writeYearSummaryTables(
                 item.totalIn,
                 item.totalOut,
                 item.stock,
-                item.value
+                item.value,
+                item.revenue || 0,
+                item.profit || 0
             ]);
 
             await sheets.spreadsheets.values.update({
                 spreadsheetId,
-                range: `'${sheetName}'!A${inventoryStartRow}:G${inventoryStartRow + 1}`,
+                range: `'${sheetName}'!A${inventoryStartRow}:I${inventoryStartRow + 1}`,
                 valueInputOption: 'RAW',
                 requestBody: { values: inventoryHeader }
             });
 
             await sheets.spreadsheets.values.update({
                 spreadsheetId,
-                range: `'${sheetName}'!A${inventoryStartRow + 2}:G${inventoryStartRow + 2 + inventoryRows.length - 1}`,
+                range: `'${sheetName}'!A${inventoryStartRow + 2}:I${inventoryStartRow + 2 + inventoryRows.length - 1}`,
                 valueInputOption: 'USER_ENTERED',
                 requestBody: { values: inventoryRows }
             });
 
-            console.log(`✅ Inventory từ row ${inventoryStartRow}`);
+            console.log(`✅ Detailed Stats từ row ${inventoryStartRow}`);
+
+            // Write Monthly Statistics table (below Inventory)
+            const monthlyStartRow = inventoryStartRow + inventoryRows.length + 5;
+            const monthlyHeader = [
+                ['📅 THỐNG KÊ THÁNG NĂM ' + year, '', '', '', '', ''],
+                ['Tháng', 'Tổng nhập', 'Tổng bán', 'Lợi nhuận']
+            ];
+
+            const monthlyRows = [];
+            for (let m = 1; m <= 12; m++) {
+                monthlyRows.push([
+                    `Tháng ${m}`,
+                    `=SUMIFS($H$2:$H${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m}, $C$2:$C${dataRowCount + 1}, "NHẬP")`,
+                    `=SUMIFS($H$2:$H${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m}, $C$2:$C${dataRowCount + 1}, "BÁN")`,
+                    `=SUMIFS($I$2:$I${dataRowCount + 1}, $L$2:$L${dataRowCount + 1}, ${m})`
+                ]);
+            }
+            monthlyRows.push([
+                'Cả năm',
+                `=SUM(B${monthlyStartRow + 2}:B${monthlyStartRow + 13})`,
+                `=SUM(C${monthlyStartRow + 2}:C${monthlyStartRow + 13})`,
+                `=SUM(D${monthlyStartRow + 2}:D${monthlyStartRow + 13})`
+            ]);
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${monthlyStartRow}:D${monthlyStartRow + 1}`,
+                valueInputOption: 'RAW',
+                requestBody: { values: monthlyHeader }
+            });
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${monthlyStartRow + 2}:D${monthlyStartRow + 14}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: monthlyRows }
+            });
         }
 
         return { success: true };

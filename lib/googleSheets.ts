@@ -4,27 +4,41 @@ import { google } from 'googleapis';
 export const appendToSheet = async (values: any[]) => {
   try {
     const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
-    if (!rawPrivateKey) {
-      throw new Error('Chưa cài đặt biến môi trường GOOGLE_PRIVATE_KEY');
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+
+    if (!rawPrivateKey || !clientEmail) {
+      throw new Error('Thiếu biến môi trường: GOOGLE_PRIVATE_KEY hoặc GOOGLE_SERVICE_ACCOUNT_EMAIL');
     }
 
-    // XỬ LÝ KHÓA: Cách an toàn nhất cho Vercel
-    // Nếu key chứa ký tự \n (dạng text), replace nó bằng ký tự xuống dòng thật
-    const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
+    // --- XỬ LÝ KHÓA (ROBUST MODE) ---
+    // 1. Trim khoảng trắng thừa đầu đuôi
+    // 2. Loại bỏ dấu ngoặc kép bao quanh (nếu có)
+    // 3. Chuyển đổi \n thành xuống dòng thực
+    const privateKey = rawPrivateKey
+      .trim()
+      .replace(/^["']|["']$/g, '') 
+      .replace(/\\n/g, '\n');
+
+    console.log('--- DEBUG GOOGLE AUTH ---');
+    console.log('Client Email:', clientEmail);
+    console.log('Private Key Length:', privateKey.length);
+    console.log('Key Header:', privateKey.substring(0, 30));
+    console.log('Key Footer:', privateKey.substring(privateKey.length - 30));
+    // Kiểm tra xem key có hợp lệ không
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
+      console.error('ERROR: Key không đúng định dạng PEM!');
+    }
+    console.log('-------------------------');
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        client_email: clientEmail,
         private_key: privateKey,
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    
-    // Tên Sheet phải khớp CHÍNH XÁC với tên tab dưới đáy Google Sheet của bạn
-    // Mặc định là 'Sheet1' nếu bạn chưa đổi tên
-    // Bạn đang dùng 'Nhập hàng', hãy chắc chắn tab đó tên là 'Nhập hàng'
     const range = 'Nhập hàng!A:E'; 
 
     const response = await sheets.spreadsheets.values.append({
@@ -39,6 +53,7 @@ export const appendToSheet = async (values: any[]) => {
     return { success: true, data: response.data };
   } catch (error: any) {
     console.error('Lỗi Google Sheets:', error.message);
-    return { success: false, error: error.message };
+    // Trả về lỗi chi tiết để hiển thị lên UI cho dễ debug
+    return { success: false, error: `Lỗi: ${error.message}` };
   }
 };

@@ -423,7 +423,7 @@ function NhapHangContent() {
                         <Package className="w-5 h-5 text-primary" />
                         Số lượng
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <input
                             ref={soLuongRef}
                             type="text"
@@ -437,9 +437,9 @@ function NhapHangContent() {
                                 }
                             }}
                             placeholder="0"
-                            className="flex-1 px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-center text-foreground font-bold text-xl transition-all outline-none"
+                            className="flex-[2] min-w-0 px-3 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-center text-foreground font-bold text-xl transition-all outline-none"
                         />
-                        <div className="relative min-w-[100px]" ref={unitDropdownRef}>
+                        <div className="relative flex-1 min-w-[90px]" ref={unitDropdownRef}>
                             <div className="flex items-center gap-1">
                                 <input
                                     type="text"

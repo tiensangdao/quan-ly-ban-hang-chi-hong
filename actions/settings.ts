@@ -284,17 +284,7 @@ export async function syncToGoogleSheets(year?: number) {
             }
         }
 
-        // 4. Write Top Products and Inventory tables AFTER data
-        console.log(`Writing summary tables to sheet "${sheetName}"...`);
-        await writeYearSummaryTables(targetYear, topProducts, inventory, typeStats, dataRowCount);
-
-        // Update last_sync_sheets timestamp
-        await supabase
-            .from('app_settings')
-            .update({ last_sync_sheets: new Date().toISOString() })
-            .eq('id', 1);
-
-        // Calculate monthly summaries from allData
+        // 4. Calculate monthly summaries from allData
         const monthlyData: { month: number; nhap: number; ban: number; lai: number }[] = [];
         for (let month = 1; month <= 12; month++) {
             const monthItems = allData.filter(item => {
@@ -313,12 +303,15 @@ export async function syncToGoogleSheets(year?: number) {
             monthlyData.push({ month, nhap, ban, lai });
         }
 
-        // Setup/update Tổng hợp sheet with calculated summaries
-        console.log('Setting up "Tổng hợp" sheet with monthly data...');
-        const summaryResult = await setupSummarySheet(monthlyData);
-        if (!summaryResult.success) {
-            console.error('Setup summary sheet warning:', summaryResult.error);
-        }
+        // 5. Write Top Products, Inventory, and Monthly Summary tables AFTER data
+        console.log(`Writing summary tables to sheet "${sheetName}"...`);
+        await writeYearSummaryTables(targetYear, topProducts, inventory, typeStats, dataRowCount, monthlyData);
+
+        // Update last_sync_sheets timestamp
+        await supabase
+            .from('app_settings')
+            .update({ last_sync_sheets: new Date().toISOString() })
+            .eq('id', 1);
 
         return {
             success: true,

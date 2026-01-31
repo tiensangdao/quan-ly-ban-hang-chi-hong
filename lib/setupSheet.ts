@@ -224,13 +224,14 @@ export async function setupYearSheet(
     }
 }
 
-// Write Top Products, Type Stats, and Inventory tables AFTER data is written
+// Write Top Products, Type Stats, Inventory, and Monthly Summary tables AFTER data is written
 export async function writeYearSummaryTables(
     year: number,
     topProducts: { product: string; unit: string; quantity: number; revenue: number; profit: number }[],
     inventory: { product: string; unit: string; totalIn: number; totalOut: number; stock: number; value: number; revenue?: number; profit?: number }[],
     typeStats: { type: string; count: number; total: number }[],
-    dataRowCount: number
+    dataRowCount: number,
+    monthlyData?: { month: number; nhap: number; ban: number; lai: number }[]
 ) {
     try {
         const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -330,12 +331,13 @@ export async function writeYearSummaryTables(
 
         // 3. Write Full Inventory/Product Performance table (Below Top Products)
         // Includes Stock + Revenue + Profit
+        let inventoryStartRow = startRow;
         if (inventory && inventory.length > 0) {
             const topProductsCount = topProducts?.length || 0;
             // Gap depends on which table is longer (Top Products or Type Stats).
             // Type Stats is only 2 rows + header. Top products is 10 rows.
             // So we can stick to using topProductsCount for row calculation.
-            const inventoryStartRow = startRow + (topProductsCount > 5 ? topProductsCount : 5) + 5;
+            inventoryStartRow = startRow + (topProductsCount > 5 ? topProductsCount : 5) + 5;
 
             const inventoryHeader = [
                 ['📦 THỐNG KÊ CHI TIẾT SẢN PHẨM', '', '', '', '', '', '', '', ''],
@@ -372,7 +374,156 @@ export async function writeYearSummaryTables(
 
         }
 
-        return { success: true };
+        // 4. Write Monthly Summary table (Below Inventory)
+        if (monthlyData && monthlyData.length > 0) {
+            const summaryStartRow = inventory && inventory.length > 0 ? inventoryStartRow + inventory.length + 4 : startRow + 15;
+
+            const summaryHeaders = [
+                [`📊 TỔNG HỢP NĂM ${year}`, '', '', ''],
+                ['Tháng', 'Tổng nhập', 'Tổng bán', 'Lãi']
+            ];
+
+            const summaryRows = [];
+            let totalNhap = 0, totalBan = 0, totalLai = 0;
+
+            for (let month = 1; month <= 12; month++) {
+                const data = monthlyData.find(d => d.month === month);
+                const nhap = data?.nhap || 0;
+                const ban = data?.ban || 0;
+                const lai = data?.lai || 0;
+
+                totalNhap += nhap;
+                totalBan += ban;
+                totalLai += lai;
+
+                summaryRows.push([
+                    `Tháng ${month}`,
+                    nhap > 0 ? nhap : '',
+                    ban > 0 ? ban : '',
+                    lai > 0 ? lai : ''
+                ]);
+            }
+
+            summaryRows.push([
+                'TỔNG NĂM',
+                totalNhap > 0 ? totalNhap : '',
+                totalBan > 0 ? totalBan : '',
+                totalLai > 0 ? totalLai : ''
+            ]);
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${summaryStartRow}:D${summaryStartRow + 1}`,
+                valueInputOption: 'RAW',
+                requestBody: { values: summaryHeaders }
+            });
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId,
+                range: `'${sheetName}'!A${summaryStartRow + 2}:D${summaryStartRow + 2 + summaryRows.length - 1}`,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: { values: summaryRows }
+            });
+
+            console.log(`✅ Monthly Summary từ row ${summaryStartRow}`);
+
+            // 5. Create Chart for Monthly Summary
+            const sheetId = await getSheetId(sheets, spreadsheetId!, sheetName);
+            
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId,
+                requestBody: {
+                    requests: [{
+                        addChart: {
+                            chart: {
+                                spec: {
+                                    title: `Chi Nhập vs Doanh Thu - Năm ${year}`,
+                                    basicChart: {
+                                        chartType: 'COLUMN',
+                                        legendPosition: 'BOTTOM_LEGEND',
+                                        axis: [
+                                            {
+                                                position: 'BOTTOM_AXIS',
+                                                title: 'Tháng'
+                                            },
+                                            {
+                                                position: 'LEFT_AXIS',
+                                                title: 'Số tiền (VNĐ)'
+                                            }
+                                        ],
+                                        domains: [
+                                            {
+                                                domain: {
+                                                    sourceRange: {
+                                                        sources: [
+                                                            {
+                                                                sheetId,
+                                                                startRowIndex: summaryStartRow + 1,
+                                                                endRowIndex: summaryStartRow + 13, // 12 months
+                                                                startColumnIndex: 0,
+                                                                endColumnIndex: 1
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        series: [
+                                            {
+                                                series: {
+                                                    sourceRange: {
+                                                        sources: [
+                                                            {
+                                                                sheetId,
+                                                                startRowIndex: summaryStartRow + 1,
+                                                                endRowIndex: summaryStartRow + 13,
+                                                                startColumnIndex: 1,
+                                                                endColumnIndex: 2
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                targetAxis: 'LEFT_AXIS'
+                                            },
+                                            {
+                                                series: {
+                                                    sourceRange: {
+                                                        sources: [
+                                                            {
+                                                                sheetId,
+                                                                startRowIndex: summaryStartRow + 1,
+                                                                endRowIndex: summaryStartRow + 13,
+                                                                startColumnIndex: 2,
+                                                                endColumnIndex: 3
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                targetAxis: 'LEFT_AXIS'
+                                            }
+                                        ],
+                                        headerCount: 1
+                                    }
+                                },
+                                position: {
+                                    overlayPosition: {
+                                        anchorCell: {
+                                            sheetId,
+                                            rowIndex: summaryStartRow - 1,
+                                            columnIndex: 6
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }]
+                }
+            });
+
+            console.log(`✅ Chart created for year ${year}`);
+        }
+
+        return { success: true, summaryStartRow: inventory && inventory.length > 0 ? inventoryStartRow + inventory.length + 4 : startRow + 15 };
 
     } catch (error: any) {
         console.error('Write summary tables error:', error);

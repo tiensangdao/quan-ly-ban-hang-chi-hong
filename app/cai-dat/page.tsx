@@ -168,7 +168,7 @@ export default function CaiDatPage() {
     return (
         <div className="p-5 pb-24 min-h-screen bg-background">
             <Toaster position="top-center" />
-            
+
             <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white rounded-2xl p-6 mb-6 shadow-lg">
                 <div className="flex items-center gap-3">
                     <Settings className="w-8 h-8" />
@@ -346,9 +346,13 @@ export default function CaiDatPage() {
                         </label>
                         <input
                             type="number"
-                            value={settings?.ty_le_lai_mac_dinh || 30}
-                            onChange={(e) => setSettings(prev => prev ? { ...prev, ty_le_lai_mac_dinh: parseInt(e.target.value) } : null)}
+                            value={settings?.ty_le_lai_mac_dinh ?? ''}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSettings(prev => prev ? { ...prev, ty_le_lai_mac_dinh: val === '' ? 0 : parseInt(val) } : null);
+                            }}
                             className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-bold transition-all outline-none"
+                            placeholder="Nhập phần trăm..."
                         />
                     </div>
 
@@ -359,9 +363,13 @@ export default function CaiDatPage() {
                         </label>
                         <input
                             type="number"
-                            value={settings?.nguong_canh_bao_mac_dinh || 10}
-                            onChange={(e) => setSettings(prev => prev ? { ...prev, nguong_canh_bao_mac_dinh: parseInt(e.target.value) } : null)}
+                            value={settings?.nguong_canh_bao_mac_dinh ?? ''}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSettings(prev => prev ? { ...prev, nguong_canh_bao_mac_dinh: val === '' ? 0 : parseInt(val) } : null);
+                            }}
                             className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-bold transition-all outline-none"
+                            placeholder="Nhập số lượng..."
                         />
                     </div>
 

@@ -15,7 +15,8 @@ import {
   CheckCircle,
   XCircle,
   X,
-  Filter
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 
 interface Product {
@@ -45,6 +46,20 @@ interface HistoryRecord {
     khach_hang?: string;
 }
 
+const InventorySkeleton = () => (
+    <div className="bg-white border-2 border-orange-100 rounded-2xl overflow-hidden animate-pulse">
+        <div className="bg-orange-50 h-16 w-full mb-4"></div>
+        <div className="p-5 space-y-4">
+            <div className="flex gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-full"></div>
+                <div className="h-4 bg-orange-100 rounded w-1/3 mt-2"></div>
+            </div>
+            <div className="h-24 bg-orange-50 rounded-xl"></div>
+            <div className="h-24 bg-orange-50 rounded-xl"></div>
+        </div>
+    </div>
+);
+
 export default function TonKhoPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [inventory, setInventory] = useState<Record<string, number>>({});
@@ -56,12 +71,15 @@ export default function TonKhoPage() {
     const [showHistory, setShowHistory] = useState(false);
     const [filterMonth, setFilterMonth] = useState<number | null>(null);
     const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'low' | 'out'>('all');
 
     useEffect(() => {
         fetchData();
     }, []);
 
     const fetchData = async () => {
+        setLoading(true);
         const { data: productsData } = await supabase
             .from('products')
             .select('*')
@@ -101,6 +119,7 @@ export default function TonKhoPage() {
         setInventory(inventoryMap);
         setLastImportDates(lastDateMap);
         setFinancialData(financialMap);
+        setLoading(false);
     };
 
     const inventoryList = useMemo((): InventoryItem[] => {
@@ -124,6 +143,12 @@ export default function TonKhoPage() {
             item.product.ten_hang.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
+        if (statusFilter === 'low') {
+            filtered = filtered.filter(item => item.ton_kho > 0 && item.ton_kho <= 10);
+        } else if (statusFilter === 'out') {
+            filtered = filtered.filter(item => item.ton_kho <= 0);
+        }
+
         filtered.sort((a, b) => {
             const getStatus = (qty: number) => {
                 if (qty === 0) return 0;
@@ -134,29 +159,29 @@ export default function TonKhoPage() {
         });
 
         return filtered;
-    }, [inventoryList, searchTerm]);
+    }, [inventoryList, searchTerm, statusFilter]);
 
     const getStatusColor = (qty: number) => {
         if (qty === 0) return 'bg-red-50 border-red-200';
-        if (qty <= 10) return 'bg-yellow-50 border-yellow-200';
+        if (qty <= 10) return 'bg-orange-50 border-orange-200';
         return 'bg-green-50 border-green-200';
     };
 
     const getStatusBadge = (qty: number) => {
         if (qty === 0) return (
-            <div className="flex items-center justify-center gap-2 text-red-600">
+            <div className="flex items-center justify-center gap-2 text-danger">
                 <XCircle className="w-6 h-6" />
                 <span className="font-bold text-lg">Hết hàng</span>
             </div>
         );
         if (qty <= 10) return (
-            <div className="flex items-center justify-center gap-2 text-yellow-600">
+            <div className="flex items-center justify-center gap-2 text-warning">
                 <AlertCircle className="w-6 h-6" />
                 <span className="font-bold text-lg">Sắp hết hàng!</span>
             </div>
         );
         return (
-            <div className="flex items-center justify-center gap-2 text-green-600">
+            <div className="flex items-center justify-center gap-2 text-success">
                 <CheckCircle className="w-6 h-6" />
                 <span className="font-bold text-lg">Còn hàng</span>
             </div>
@@ -232,31 +257,74 @@ export default function TonKhoPage() {
     }, [history]);
 
     return (
-        <div className="p-5 pb-24 bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen">
+        <div className="p-5 pb-24 min-h-screen bg-background">
             <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-xl shadow-md">
+                    <div className="bg-primary p-2 rounded-xl shadow-lg shadow-orange-200">
                         <Package className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                        Tồn kho hiện tại
+                    <h1 className="text-2xl font-bold text-foreground">
+                        Tồn Kho Hiện Tại
                     </h1>
                 </div>
             </div>
 
-            <div className="mb-4 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="mb-4 relative clay-card p-0 overflow-hidden">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
                 <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Tìm sản phẩm..."
-                    className="w-full pl-12 pr-4 py-3 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium shadow-sm"
+                    className="w-full pl-12 pr-4 py-4 bg-transparent text-foreground font-medium outline-none placeholder:text-gray-400"
                 />
             </div>
 
-            <div className="space-y-3">
-                {filteredInventory.map((item) => {
+            {/* Filter Tabs */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${
+                        statusFilter === 'all'
+                            ? 'bg-primary text-white shadow-md'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
+                    }`}
+                >
+                    Tất cả
+                </button>
+                <button
+                    onClick={() => setStatusFilter('low')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${
+                        statusFilter === 'low'
+                            ? 'bg-warning text-white shadow-md'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
+                    }`}
+                >
+                    <AlertCircle className="w-4 h-4" />
+                    Sắp hết
+                </button>
+                <button
+                    onClick={() => setStatusFilter('out')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm whitespace-nowrap transition-all ${
+                        statusFilter === 'out'
+                            ? 'bg-danger text-white shadow-md'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
+                    }`}
+                >
+                    <XCircle className="w-4 h-4" />
+                    Hết hàng
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                {loading ? (
+                    <>
+                        <InventorySkeleton />
+                        <InventorySkeleton />
+                        <InventorySkeleton />
+                    </>
+                ) : (
+                    filteredInventory.map((item) => {
                     const lai = item.tong_tien_ban - item.tong_tien_nhap;
                     const hoiVonPercent = item.tong_tien_nhap > 0
                         ? Math.min((item.tong_tien_ban / item.tong_tien_nhap) * 100, 100)
@@ -267,10 +335,10 @@ export default function TonKhoPage() {
                         <div
                             key={item.product.id}
                             onClick={() => handleViewHistory(item.product.id)}
-                            className="bg-white border-2 border-blue-100 rounded-2xl cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+                            className="clay-card overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
                         >
                             {/* Header with product name */}
-                            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                            <div className="bg-gradient-to-r from-primary to-orange-400 p-4">
                                 <div className="flex justify-between items-center">
                                     <h3 className="font-bold text-xl text-white">{item.product.ten_hang}</h3>
                                     <Eye className="w-6 h-6 text-white/80 hover:text-white transition-colors" />
@@ -278,37 +346,37 @@ export default function TonKhoPage() {
                             </div>
 
                             {/* Section 1: Tồn kho */}
-                            <div className="bg-gradient-to-br from-blue-50 to-white p-5 border-b border-blue-100">
+                            <div className="p-5 border-b border-orange-100 bg-white">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <Package className="w-5 h-5 text-blue-600" />
-                                    <h4 className="text-sm font-bold text-blue-900 uppercase tracking-wide">Tồn kho</h4>
+                                    <Package className="w-5 h-5 text-primary" />
+                                    <h4 className="text-sm font-bold text-primary uppercase tracking-wide">Tồn kho</h4>
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm">
-                                        <span className="text-sm font-semibold text-gray-800">Còn lại:</span>
-                                        <span className="font-bold text-3xl text-blue-600">
-                                            {item.ton_kho} <span className="text-lg text-gray-600">{item.product.don_vi}</span>
+                                    <div className="flex justify-between items-center p-3 bg-orange-50/50 rounded-xl">
+                                        <span className="text-sm font-semibold text-foreground/80">Còn lại:</span>
+                                        <span className="font-bold text-3xl text-primary">
+                                            {item.ton_kho} <span className="text-lg text-foreground/60">{item.product.don_vi}</span>
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-gray-700">Giá nhập:</span>
-                                        <span className="font-bold text-gray-900">
+                                        <span className="text-sm font-medium text-foreground/70">Giá nhập:</span>
+                                        <span className="font-bold text-foreground">
                                             {formatCurrency(item.product.gia_nhap_gan_nhat)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-gray-700">Giá trị tồn:</span>
-                                        <span className="font-bold text-blue-700">
+                                        <span className="text-sm font-medium text-foreground/70">Giá trị tồn:</span>
+                                        <span className="font-bold text-primary-hover">
                                             {formatCurrency(item.gia_tri_ton)}
                                         </span>
                                     </div>
                                     {item.ngay_nhap_gan_nhat && (
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-1.5">
-                                                <Calendar className="w-4 h-4 text-gray-500" />
-                                                <span className="text-sm font-medium text-gray-700">Nhập gần nhất:</span>
+                                                <Calendar className="w-4 h-4 text-primary/60" />
+                                                <span className="text-sm font-medium text-foreground/70">Nhập gần nhất:</span>
                                             </div>
-                                            <span className="font-semibold text-gray-900">
+                                            <span className="font-semibold text-foreground">
                                                 {formatDateVietnamese(item.ngay_nhap_gan_nhat)}
                                             </span>
                                         </div>
@@ -318,16 +386,16 @@ export default function TonKhoPage() {
 
                             {/* Section 2: Tài chính */}
                             {item.tong_tien_nhap > 0 && (
-                                <div className="bg-gradient-to-br from-amber-50 to-white p-5 border-b border-amber-100">
+                                <div className="p-5 border-b border-orange-100 bg-orange-50/30">
                                     <div className="flex items-center gap-2 mb-3">
                                         <DollarSign className="w-5 h-5 text-amber-600" />
-                                        <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Tài chính</h4>
+                                        <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wide">Tài chính</h4>
                                     </div>
                                     <div className="space-y-3">
-                                        <div className="p-3 bg-white rounded-xl shadow-sm">
+                                        <div className="p-3 bg-white rounded-xl shadow-sm border border-orange-100">
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="text-sm font-semibold text-gray-800">Hồi vốn:</span>
-                                                <span className="font-bold text-2xl text-gray-900">
+                                                <span className="text-sm font-semibold text-foreground/80">Hồi vốn:</span>
+                                                <span className="font-bold text-2xl text-foreground">
                                                     {hoiVonPercent.toFixed(0)}%
                                                 </span>
                                             </div>
@@ -340,17 +408,17 @@ export default function TonKhoPage() {
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-1.5">
-                                                <TrendingDown className="w-4 h-4 text-gray-500" />
-                                                <span className="text-sm font-medium text-gray-700">Đã nhập:</span>
+                                                <TrendingDown className="w-4 h-4 text-primary" />
+                                                <span className="text-sm font-medium text-foreground/70">Đã nhập:</span>
                                             </div>
-                                            <span className="font-bold text-gray-900">
+                                            <span className="font-bold text-foreground">
                                                 {formatCurrency(item.tong_tien_nhap)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-1.5">
                                                 <TrendingUp className="w-4 h-4 text-green-600" />
-                                                <span className="text-sm font-medium text-gray-700">Đã bán:</span>
+                                                <span className="text-sm font-medium text-foreground/70">Đã bán:</span>
                                             </div>
                                             <span className="font-bold text-green-700">
                                                 {formatCurrency(item.tong_tien_ban)}
@@ -374,26 +442,27 @@ export default function TonKhoPage() {
                             )}
 
                             {/* Section 3: Trạng thái */}
-                            <div className="bg-white p-4">
+                            <div className="p-4 bg-white">
                                 <div className="text-center text-lg font-bold">
                                     {getStatusBadge(item.ton_kho)}
                                 </div>
                             </div>
                         </div>
                     );
-                })}
+                })
+            )}
 
-                {filteredInventory.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
+                {filteredInventory.length === 0 && !loading && (
+                    <div className="text-center py-8 text-gray-500 font-medium">
                         Không tìm thấy sản phẩm nào
                     </div>
                 )}
             </div>
 
             {showHistory && selectedProduct && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl">
-                        <div className="p-5 border-b border-blue-200 flex justify-between items-center bg-gradient-to-r from-blue-500 to-blue-600">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in">
+                        <div className="p-5 border-b border-orange-100 flex justify-between items-center bg-gradient-to-r from-primary to-orange-500">
                             <div className="flex items-center gap-2">
                                 <TrendingUp className="w-6 h-6 text-white" />
                                 <h2 className="text-xl font-bold text-white">
@@ -402,27 +471,27 @@ export default function TonKhoPage() {
                             </div>
                             <button
                                 onClick={() => setShowHistory(false)}
-                                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                                className="text-white hover:bg-white/20 rounded-full p-1.5 transition-colors"
                             >
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
 
                         {/* Filter Section */}
-                        <div className="p-4 bg-gradient-to-br from-blue-50 to-white border-b border-blue-200">
+                        <div className="p-4 bg-orange-50/50 border-b border-orange-100">
                             <div className="flex items-center gap-2 mb-3">
-                                <Filter className="w-4 h-4 text-blue-600" />
-                                <h3 className="text-sm font-bold text-gray-900">Lọc theo:</h3>
+                                <Filter className="w-4 h-4 text-primary" />
+                                <h3 className="text-sm font-bold text-foreground">Lọc theo:</h3>
                             </div>
                             
                             {/* Quick Filter Buttons */}
                             <div className="grid grid-cols-4 gap-2 mb-3">
                                 <button
                                     onClick={() => { setFilterMonth(null); setFilterYear(new Date().getFullYear()); }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${
                                         !filterMonth && filterYear === new Date().getFullYear()
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                            ? 'bg-primary text-white shadow-md'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
                                     }`}
                                 >
                                     Tất cả
@@ -433,10 +502,10 @@ export default function TonKhoPage() {
                                         setFilterMonth(now.getMonth() + 1); 
                                         setFilterYear(now.getFullYear()); 
                                     }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${
                                         filterMonth === new Date().getMonth() + 1 && filterYear === new Date().getFullYear()
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                            ? 'bg-primary text-white shadow-md'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
                                     }`}
                                 >
                                     Tháng này
@@ -448,24 +517,24 @@ export default function TonKhoPage() {
                                         setFilterMonth(lastMonth.getMonth() + 1); 
                                         setFilterYear(lastMonth.getFullYear()); 
                                     }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${
                                         (() => {
                                             const lastMonth = new Date();
                                             lastMonth.setMonth(lastMonth.getMonth() - 1);
                                             return filterMonth === lastMonth.getMonth() + 1 && filterYear === lastMonth.getFullYear();
                                         })()
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                            ? 'bg-primary text-white shadow-md'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
                                     }`}
                                 >
                                     Tháng trước
                                 </button>
                                 <button
                                     onClick={() => { setFilterMonth(null); setFilterYear(new Date().getFullYear()); }}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${
                                         !filterMonth && filterYear === new Date().getFullYear()
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                            ? 'bg-primary text-white shadow-md'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-orange-50'
                                     }`}
                                 >
                                     Năm nay
@@ -475,96 +544,102 @@ export default function TonKhoPage() {
                             {/* Dropdown Filters */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1">Tháng:</label>
-                                    <select
-                                        value={filterMonth || ''}
-                                        onChange={(e) => setFilterMonth(e.target.value ? parseInt(e.target.value) : null)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 font-medium focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="">Tất cả tháng</option>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                            <option key={m} value={m}>Tháng {m}</option>
-                                        ))}
-                                    </select>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Tháng:</label>
+                                    <div className="relative">
+                                        <select
+                                            value={filterMonth || ''}
+                                            onChange={(e) => setFilterMonth(e.target.value ? parseInt(e.target.value) : null)}
+                                            className="w-full px-3 py-2 border border-orange-200 rounded-xl text-sm text-foreground font-semibold focus:ring-2 focus:ring-primary appearance-none bg-white"
+                                        >
+                                            <option value="">Tất cả tháng</option>
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                                <option key={m} value={m}>Tháng {m}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1">Năm:</label>
-                                    <select
-                                        value={filterYear}
-                                        onChange={(e) => setFilterYear(parseInt(e.target.value))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 font-medium focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        {availableYears.length > 0 ? (
-                                            availableYears.map(year => (
-                                                <option key={year} value={year}>{year}</option>
-                                            ))
-                                        ) : (
-                                            <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                                        )}
-                                    </select>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Năm:</label>
+                                    <div className="relative">
+                                        <select
+                                            value={filterYear}
+                                            onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                                            className="w-full px-3 py-2 border border-orange-200 rounded-xl text-sm text-foreground font-semibold focus:ring-2 focus:ring-primary appearance-none bg-white"
+                                        >
+                                            {availableYears.length > 0 ? (
+                                                availableYears.map(year => (
+                                                    <option key={year} value={year}>{year}</option>
+                                                ))
+                                            ) : (
+                                                <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+                                            )}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Result Count */}
-                            <div className="mt-3 flex items-center gap-2 p-2 bg-white rounded-lg">
-                                <CheckCircle className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm text-gray-700">
-                                    Tìm thấy: <span className="font-bold text-blue-600">{filteredHistory.length}</span> giao dịch
+                            <div className="mt-3 flex items-center gap-2 p-2 bg-white rounded-lg border border-orange-100 shadow-sm">
+                                <CheckCircle className="w-4 h-4 text-primary" />
+                                <span className="text-sm text-gray-600 font-medium">
+                                    Tìm thấy: <span className="font-bold text-primary">{filteredHistory.length}</span> giao dịch
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-orange-50/30">
                             {filteredHistory.map((record) => (
                                 <div
                                     key={record.id}
                                     className={`p-4 rounded-xl border-2 shadow-sm ${record.loai === 'nhap'
-                                        ? 'bg-gradient-to-br from-blue-50 to-white border-blue-200'
-                                        : 'bg-gradient-to-br from-green-50 to-white border-green-200'
+                                        ? 'bg-white border-blue-100'
+                                        : 'bg-white border-green-100'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-2">
                                             {record.loai === 'nhap' ? (
                                                 <>
-                                                    <div className="bg-blue-500 p-1.5 rounded-lg">
+                                                    <div className="bg-blue-500 p-1.5 rounded-lg shadow-sm">
                                                         <TrendingDown className="w-4 h-4 text-white" />
                                                     </div>
                                                     <span className="font-bold text-gray-900">Nhập hàng</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <div className="bg-green-500 p-1.5 rounded-lg">
+                                                    <div className="bg-green-500 p-1.5 rounded-lg shadow-sm">
                                                         <TrendingUp className="w-4 h-4 text-white" />
                                                     </div>
                                                     <span className="font-bold text-gray-900">Bán hàng</span>
                                                 </>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-gray-600">
-                                            <Calendar className="w-4 h-4" />
-                                            <span className="text-sm font-medium">
+                                        <div className="flex items-center gap-1.5 text-gray-500">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            <span className="text-xs font-semibold">
                                                 {formatDateVietnamese(record.ngay)}
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                            <span className="text-sm font-medium text-gray-700">Số lượng:</span>
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                            <span className="text-sm font-medium text-gray-600">Số lượng:</span>
                                             <span className="font-bold text-gray-900">
                                                 {record.loai === 'nhap' ? '+' : '-'}{record.so_luong} {selectedProduct.don_vi}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                            <span className="text-sm font-medium text-gray-700">Đơn giá:</span>
+                                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                            <span className="text-sm font-medium text-gray-600">Đơn giá:</span>
                                             <span className="font-bold text-gray-900">
                                                 {formatCurrency(record.don_gia)}
                                             </span>
                                         </div>
                                         {record.loai === 'ban' && record.gia_nhap && (
-                                            <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                                <span className="text-sm font-medium text-gray-700">Lời/cái:</span>
+                                            <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                                <span className="text-sm font-medium text-gray-600">Lời/cái:</span>
                                                 <span className={`font-bold ${record.don_gia > record.gia_nhap
                                                         ? 'text-green-600'
                                                         : 'text-red-600'
@@ -574,15 +649,15 @@ export default function TonKhoPage() {
                                             </div>
                                         )}
                                         {record.nha_cung_cap && (
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium text-gray-700">NCC:</span>
-                                                <span className="font-semibold text-gray-900">{record.nha_cung_cap}</span>
+                                            <div className="flex justify-between items-center px-2">
+                                                <span className="text-xs font-bold text-gray-400 uppercase">NCC:</span>
+                                                <span className="text-sm font-semibold text-gray-700">{record.nha_cung_cap}</span>
                                             </div>
                                         )}
                                         {record.khach_hang && (
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium text-gray-700">Khách:</span>
-                                                <span className="font-semibold text-gray-900">{record.khach_hang}</span>
+                                            <div className="flex justify-between items-center px-2">
+                                                <span className="text-xs font-bold text-gray-400 uppercase">Khách:</span>
+                                                <span className="text-sm font-semibold text-gray-700">{record.khach_hang}</span>
                                             </div>
                                         )}
                                     </div>
@@ -590,16 +665,16 @@ export default function TonKhoPage() {
                             ))}
 
                             {filteredHistory.length === 0 && (
-                                <div className="text-center py-8 text-gray-500">
-                                    Không có giao dịch nào trong khoảng thời gian này
+                                <div className="text-center py-12 text-gray-400 font-medium">
+                                    Không có giao dịch nào
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-4 border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+                        <div className="p-4 border-t border-orange-100 bg-white">
                             <button
                                 onClick={() => setShowHistory(false)}
-                                className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-lg"
+                                className="clay-button w-full py-3 px-6 rounded-xl text-lg shadow-md"
                             >
                                 Đóng
                             </button>

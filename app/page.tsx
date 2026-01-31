@@ -13,7 +13,11 @@ import {
   AlertCircle,
   Package,
   Sparkles,
-  Trophy
+  Trophy,
+  Store,
+  ShoppingCart,
+  PackagePlus,
+  Wallet
 } from 'lucide-react';
 
 interface Product {
@@ -242,52 +246,52 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-5 pb-24 flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-white">
+      <div className="p-5 pb-24 flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-blue-600 font-medium">Đang tải...</div>
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-primary font-medium">Đang tải...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-5 pb-24 bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen">
+    <div className="p-5 pb-24 min-h-screen bg-background">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-xl shadow-md">
-            <BarChart3 className="w-6 h-6 text-white" />
+          <div className="bg-primary p-2 rounded-xl shadow-lg shadow-orange-200">
+            <Store className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-            KHO HÀNG - Hôm nay
+          <h1 className="text-2xl font-bold text-foreground">
+            Quản lý Chị Hồng
           </h1>
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-          <Calendar className="w-4 h-4 text-blue-500" />
+        <div className="flex items-center gap-1.5 text-sm text-foreground/70 ml-1">
+          <Calendar className="w-4 h-4 text-primary" />
           <span>{getVietnameseDate()}</span>
         </div>
       </div>
 
       {(alerts.length > 0 || !hasImportedToday) && (
-        <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-4 mb-4 shadow-sm">
+        <div className="bg-white border-2 border-red-200 rounded-2xl p-4 mb-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h2 className="text-lg font-bold text-red-900">CẢNH BÁO QUAN TRỌNG</h2>
+            <h2 className="text-lg font-bold text-red-800">CẢNH BÁO</h2>
           </div>
           <div className="space-y-3">
             {alerts.map((alert) => (
-              <div key={alert.product.id} className="bg-white rounded-xl p-3 border border-red-200 shadow-sm">
+              <div key={alert.product.id} className="bg-red-50 rounded-xl p-3 border border-red-100 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 flex-1">
                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <div className="font-semibold text-red-700">
+                    <div className="font-semibold text-red-900">
                       {alert.product.ten_hang}:{' '}
                       {alert.ton_kho === 0 ? 'Hết hàng' : `Còn ${alert.ton_kho} ${alert.product.don_vi}`}
                     </div>
                   </div>
                   <button
                     onClick={() => router.push('/nhap-hang')}
-                    className="ml-2 px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-sm"
+                    className="ml-2 px-3 py-1.5 clay-button text-sm"
                   >
                     Nhập ngay
                   </button>
@@ -296,17 +300,17 @@ export default function DashboardPage() {
             ))}
 
             {!hasImportedToday && (
-              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-3 border border-yellow-300 shadow-sm">
+              <div className="bg-orange-50 rounded-xl p-3 border border-orange-200 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 flex-1">
-                    <Package className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
-                    <div className="font-semibold text-yellow-800">
+                    <Package className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div className="font-semibold text-orange-900">
                       Chưa nhập hàng hôm nay
                     </div>
                   </div>
                   <button
                     onClick={() => router.push('/nhap-hang')}
-                    className="ml-2 px-3 py-1.5 bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-sm font-semibold rounded-lg hover:from-yellow-700 hover:to-amber-700 transition-all shadow-sm"
+                    className="ml-2 px-3 py-1.5 clay-button text-sm"
                   >
                     Nhập hàng
                   </button>
@@ -317,118 +321,118 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+      <div className="clay-card p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-1.5 rounded-lg">
-            <Calendar className="w-4 h-4 text-white" />
+          <div className="bg-primary/10 p-1.5 rounded-lg">
+            <Calendar className="w-4 h-4 text-primary" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">HÔM NAY</h2>
+          <h2 className="text-lg font-bold text-foreground">HÔM NAY</h2>
         </div>
         <div className="space-y-3 text-sm">
-          <div className="flex justify-between items-center p-2.5 bg-blue-50 rounded-lg">
+          <div className="flex justify-between items-center p-2.5 bg-background rounded-lg border border-orange-100">
             <div className="flex items-center gap-2">
-              <ArrowDownToLine className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-700 font-medium">Nhập:</span>
+              <PackagePlus className="w-4 h-4 text-primary" />
+              <span className="text-foreground/80 font-medium">Chi Nhập:</span>
             </div>
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-foreground">
               {formatCurrency(dailyStats.tong_nhap)} ({dailyStats.so_don_nhap} đơn)
             </span>
           </div>
-          <div className="flex justify-between items-center p-2.5 bg-green-50 rounded-lg">
+          <div className="flex justify-between items-center p-2.5 bg-background rounded-lg border border-orange-100">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
-              <span className="text-gray-700 font-medium">Bán:</span>
+              <ShoppingCart className="w-4 h-4 text-primary" />
+              <span className="text-foreground/80 font-medium">Doanh Thu:</span>
             </div>
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-foreground">
               {formatCurrency(dailyStats.tong_ban)} ({dailyStats.so_don_ban} đơn)
             </span>
           </div>
-          <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200 mt-3">
+          <div className="flex justify-between items-center p-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl border border-orange-200 mt-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" />
-              <span className="text-gray-800 font-semibold">Lãi:</span>
+              <Wallet className="w-5 h-5 text-primary" />
+              <span className="text-foreground font-semibold">Lợi Nhuận:</span>
             </div>
-            <span className={`font-bold text-lg ${dailyStats.lai >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`font-bold text-lg ${dailyStats.lai >= 0 ? 'text-success-text' : 'text-danger-text'}`}>
               {dailyStats.lai >= 0 ? '+' : ''}{formatCurrency(dailyStats.lai)}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+      <div className="clay-card p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
-          <div className="bg-gradient-to-br from-purple-500 to-blue-600 p-1.5 rounded-lg">
-            <TrendingUp className="w-4 h-4 text-white" />
+          <div className="bg-secondary/10 p-1.5 rounded-lg">
+            <TrendingUp className="w-4 h-4 text-secondary" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">{getCurrentMonth().toUpperCase()}</h2>
+          <h2 className="text-lg font-bold text-foreground">{getCurrentMonth().toUpperCase()}</h2>
         </div>
         <div className="space-y-2.5 text-sm">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <ArrowDownToLine className="w-4 h-4 text-blue-500" />
-              <span className="text-gray-700">Chi nhập:</span>
+              <ArrowDownToLine className="w-4 h-4 text-primary" />
+              <span className="text-foreground/80">Chi nhập:</span>
             </div>
-            <span className="font-semibold text-gray-900">{formatCurrency(monthlyStats.chi_nhap)}</span>
+            <span className="font-semibold text-foreground">{formatCurrency(monthlyStats.chi_nhap)}</span>
           </div>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-500" />
-              <span className="text-gray-700">Doanh thu:</span>
+              <ShoppingCart className="w-4 h-4 text-secondary" />
+              <span className="text-foreground/80">Doanh thu:</span>
             </div>
-            <span className="font-semibold text-gray-900">{formatCurrency(monthlyStats.doanh_thu)}</span>
+            <span className="font-semibold text-foreground">{formatCurrency(monthlyStats.doanh_thu)}</span>
           </div>
-          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-2 border-t border-orange-100">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-800 font-medium">Lãi gộp:</span>
+              <Wallet className="w-4 h-4 text-primary" />
+              <span className="text-foreground font-medium">Lãi gộp:</span>
             </div>
-            <span className={`font-semibold ${monthlyStats.lai >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`font-semibold ${monthlyStats.lai >= 0 ? 'text-success-text' : 'text-danger-text'}`}>
               {monthlyStats.lai >= 0 ? '+' : ''}{formatCurrency(monthlyStats.lai)}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-blue-600" />
-              <span className="text-gray-700">Tỷ lệ lãi:</span>
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <span className="text-foreground/80">Tỷ lệ lãi:</span>
             </div>
-            <span className="font-semibold text-blue-600">{monthlyStats.ty_le_lai}%</span>
+            <span className="font-semibold text-primary">{monthlyStats.ty_le_lai}%</span>
           </div>
         </div>
       </div>
 
       {topProducts.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 mb-4 shadow-md border border-blue-100">
+        <div className="clay-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-4">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 rounded-lg">
-              <Trophy className="w-4 h-4 text-white" />
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Trophy className="w-4 h-4 text-primary" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">TOP BÁN TUẦN NÀY</h2>
+            <h2 className="text-lg font-bold text-foreground">TOP BÁN CHẠY</h2>
           </div>
           <div className="space-y-4">
             {topProducts.map((item, index) => {
               const maxQty = topProducts[0].so_luong;
               const percentage = (item.so_luong / maxQty) * 100;
-              const medalColors = ['from-amber-400 to-yellow-500', 'from-gray-300 to-gray-400', 'from-orange-400 to-amber-600'];
-              const bgColors = ['bg-amber-50', 'bg-gray-50', 'bg-orange-50'];
+              const medalColors = ['from-yellow-400 to-amber-500', 'from-gray-300 to-gray-400', 'from-orange-400 to-amber-600'];
+              const bgColors = ['bg-orange-50', 'bg-gray-100', 'bg-white'];
 
               return (
-                <div key={item.product.id} className={`p-3 rounded-xl ${bgColors[index] || 'bg-blue-50'}`}>
+                <div key={item.product.id} className={`p-3 rounded-xl ${bgColors[index] || 'bg-background'}`}>
                   <div className="flex justify-between items-center mb-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <div className={`bg-gradient-to-br ${medalColors[index] || 'from-blue-400 to-blue-500'} w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm`}>
+                      <div className={`bg-gradient-to-br ${medalColors[index] || 'from-primary to-orange-400'} w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm`}>
                         {index + 1}
                       </div>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-foreground">
                         {item.product.ten_hang}
                       </span>
                     </div>
-                    <span className="text-gray-700 font-medium">
+                    <span className="text-foreground/80 font-medium">
                       {item.so_luong} {item.product.don_vi}
                     </span>
                   </div>
                   <div className="w-full bg-white rounded-full h-2.5 shadow-inner">
                     <div
-                      className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 h-2.5 rounded-full transition-all duration-500 shadow-sm"
+                      className="bg-gradient-to-r from-primary via-orange-400 to-secondary h-2.5 rounded-full transition-all duration-500 shadow-sm"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
@@ -438,7 +442,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => router.push('/ton-kho')}
-            className="mt-4 w-full text-center py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold text-sm rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md"
+            className="mt-4 w-full text-center py-2.5 clay-button text-sm"
           >
             Xem tất cả →
           </button>

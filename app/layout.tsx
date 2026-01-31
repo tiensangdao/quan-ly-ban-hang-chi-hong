@@ -26,10 +26,10 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 pb-20`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background pb-20 text-foreground`}
         suppressHydrationWarning
       >
-        <main className="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
+        <main className="max-w-2xl mx-auto bg-background min-h-screen shadow-sm">
           {children}
         </main>
         <BottomNav />

@@ -1,127 +1,92 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1f2937;
-  --primary: #3b82f6;
-  --primary-light: #60a5fa;
-  --primary-lighter: #dbeafe;
-  --accent: #8b5cf6;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  /* Warm Cream Background - Consistent across browsers */
+  --background: #FFF7ED; 
+  /* High Contrast Text - Dark Warm Grey/Brown for sharpness */
+  --foreground: #431407; 
+  
+  /* Brand Colors - Warm Playful Orange */
+  --primary: #F97316; 
+  --primary-hover: #EA580C;
+  --primary-light: #FFEDD5;
+  
+  /* Accent Colors */
+  --secondary: #FB7185; /* Soft Pink for accents */
+  --accent-blue: #38BDF8; /* Soft Blue for variety */
+  
+  /* Status Colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-light: var(--primary-light);
+  --color-primary-hover: var(--primary-hover);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #f1f5f9;
-  }
-}
-
-body {
-  background: var(--background);
+/* Force background color on HTML/Body to prevent white flash/browser defaults */
+html, body {
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-geist-sans), sans-serif;
+  min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Claymorphism Utilities - Refined for Sharpness */
+.clay-card {
+  background: #FFFFFF;
+  border-radius: 1.5rem; /* Rounded 2xl */
+  border: 1px solid #FED7AA; /* Orange 200 - Crisper border */
+  box-shadow: 
+    0 10px 15px -3px rgba(249, 115, 22, 0.08), /* Soft orange shadow */
+    0 4px 6px -4px rgba(249, 115, 22, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clay-card:active {
+  transform: scale(0.99);
+}
+
+.clay-button {
+  background: var(--primary);
+  color: white;
+  border-radius: 1rem;
+  font-weight: 600;
+  border-bottom: 4px solid #C2410C; /* 3D Clicky effect */
+  transition: all 0.1s ease;
+}
+
+.clay-button:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.clay-icon-bg {
+  border-radius: 1rem;
+  box-shadow: 
+    inset 0 2px 4px 0 rgba(255, 255, 255, 0.4),
+    0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Text Sharpness */
+h1, h2, h3, h4, h5, h6 {
+  color: #271007; /* Darker brown for headers */
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #3b82f6, #60a5fa);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #2563eb, #3b82f6);
-}
-
-/* Smooth transitions */
-* {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-/* Button hover effects */
-button {
-  transform: translateY(0);
-  transition: all 0.2s ease;
-}
-
-button:active {
-  transform: translateY(1px);
-}
-
-/* Card hover effects */
-.hover-lift {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Safe area for mobile */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* Loading spinner animation */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  background: #FDBA74;
+  border-radius: 10px;
 }

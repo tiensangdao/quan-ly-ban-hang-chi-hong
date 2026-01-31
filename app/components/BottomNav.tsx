@@ -25,28 +25,32 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-blue-100 shadow-lg z-50 pb-safe">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-orange-200 shadow-lg z-50 pb-safe">
             <div className="flex justify-around items-center max-w-2xl mx-auto h-16 px-2">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
-                    const colorClass = item.color === 'green' ? 'green' : 'blue';
-                    const activeColor = colorClass === 'green' ? 'text-green-600' : 'text-blue-600';
-                    const bgColor = colorClass === 'green' ? 'bg-green-100' : 'bg-blue-100';
-                    const hoverBg = colorClass === 'green' ? 'hover:bg-green-50' : 'hover:bg-blue-50';
+                    // Use primary orange for active, gray for inactive
+                    const activeColor = 'text-primary';
+                    const inactiveColor = 'text-gray-400 hover:text-foreground';
+                    const bgColor = 'bg-orange-100'; // soft orange background
 
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
                             className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 ${
-                                isActive ? activeColor + ' font-semibold scale-105' : 'text-gray-500 hover:text-gray-700'
-                            } ${item.highlight && !isActive ? hoverBg : 'hover:bg-gray-50'}`}
+                                isActive ? activeColor + ' font-bold scale-105' : inactiveColor
+                            }`}
+                            suppressHydrationWarning
                         >
-                            <div className={`${item.highlight ? `${bgColor} rounded-full p-2 transition-all duration-200` : ''} ${isActive && item.highlight ? 'shadow-md' : ''}`}>
+                            <div 
+                                className={`${item.highlight ? `${bgColor} rounded-full p-2 clay-icon-bg transition-all duration-200` : ''} ${isActive && item.highlight ? 'shadow-sm ring-1 ring-orange-200' : ''}`}
+                                suppressHydrationWarning
+                            >
                                 <Icon className={`${item.highlight ? 'w-5 h-5' : 'w-6 h-6'} ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
                             </div>
-                            <span className="text-[10px] leading-tight">{item.name}</span>
+                            <span className="text-[10px] leading-tight font-medium" suppressHydrationWarning>{item.name}</span>
                         </Link>
                     );
                 })}

@@ -64,7 +64,7 @@ interface ProductPerformance {
     has_sales: boolean;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+const COLORS = ['#F97316', '#FB7185', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#14B8A6', '#EC4899'];
 
 export default function BaoCaoPage() {
     const [activeTab, setActiveTab] = useState<'product' | 'time'>('product');
@@ -119,9 +119,6 @@ export default function BaoCaoPage() {
             const chiNhap = nhapData?.reduce((sum, item) => sum + (item.so_luong * item.don_gia), 0) || 0;
             const doanhThu = banData?.reduce((sum, item) => sum + (item.so_luong * item.gia_ban), 0) || 0;
 
-            // Only add months that have data or are in the past/present
-            // But for a yearly report, usually we want all months to show the timeline properly
-            // Let's just add all months so the chart X-axis is consistent (T1-T12)
             data.push({
                 month: `T${month + 1}`,
                 chi_nhap: roundNumber(chiNhap),
@@ -401,10 +398,10 @@ export default function BaoCaoPage() {
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
-                    <p className="font-semibold text-gray-900 mb-1">{label}</p>
+                <div className="bg-white p-3 border border-gray-200 rounded-xl shadow-lg">
+                    <p className="font-bold text-foreground mb-1">{label}</p>
                     {payload.map((entry: any, index: number) => (
-                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                        <p key={index} className="text-sm font-medium" style={{ color: entry.color }}>
                             {entry.name}: {formatCurrency(entry.value)}
                         </p>
                     ))}
@@ -417,31 +414,31 @@ export default function BaoCaoPage() {
     if (loading) {
         return (
             <div className="p-5 pb-24 flex items-center justify-center min-h-screen">
-                <div className="text-gray-500">Đang tải dữ liệu...</div>
+                <div className="text-primary font-medium animate-pulse">Đang tải báo cáo...</div>
             </div>
         );
     }
 
     return (
-        <div className="p-5 pb-24 bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen">
+        <div className="p-5 pb-24 min-h-screen bg-background">
             <div className="mb-6">
                 <div className="flex items-center gap-2">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-xl shadow-md">
+                    <div className="bg-primary p-2 rounded-xl shadow-lg shadow-orange-200">
                         <BarChart3 className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                        Báo cáo
+                    <h1 className="text-2xl font-bold text-foreground">
+                        Báo Cáo Hiệu Quả
                     </h1>
                 </div>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6 overflow-x-auto">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
                 <button
                     onClick={() => setActiveTab('product')}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-sm ${activeTab === 'product'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'product'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'clay-button bg-white text-gray-600 border border-orange-100 hover:bg-orange-50'
                         }`}
                 >
                     <BarChart3 className="w-4 h-4" />
@@ -449,9 +446,9 @@ export default function BaoCaoPage() {
                 </button>
                 <button
                     onClick={() => setActiveTab('time')}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all shadow-sm ${activeTab === 'time'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'time'
+                        ? 'bg-primary text-white shadow-md'
+                        : 'clay-button bg-white text-gray-600 border border-orange-100 hover:bg-orange-50'
                         }`}
                 >
                     <TrendingUp className="w-4 h-4" />
@@ -463,34 +460,34 @@ export default function BaoCaoPage() {
             {activeTab === 'product' && (
                 <div className="space-y-6">
                     {/* Sort Dropdown */}
-                    <div className="bg-white p-4 rounded-xl border-2 border-blue-100 shadow-sm">
+                    <div className="clay-card p-4">
                         <div className="flex items-center gap-2 mb-2">
-                            <Filter className="w-4 h-4 text-blue-600" />
-                            <label className="text-sm font-bold text-gray-900">Sắp xếp theo:</label>
+                            <Filter className="w-4 h-4 text-primary" />
+                            <label className="text-sm font-bold text-foreground">Sắp xếp theo:</label>
                         </div>
                         <select 
                             value={sortBy} 
                             onChange={(e) => setSortBy(e.target.value as any)}
-                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-900 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                            className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
                         >
-                            <option value="revenue" className="font-semibold text-gray-900">Doanh thu cao → thấp</option>
-                            <option value="profit" className="font-semibold text-gray-900">Lãi cao → thấp</option>
-                            <option value="quantity" className="font-semibold text-gray-900">Số lượng bán nhiều → ít</option>
-                            <option value="recovery" className="font-semibold text-gray-900">Hồi vốn % cao → thấp</option>
+                            <option value="revenue">Doanh thu cao → thấp</option>
+                            <option value="profit">Lãi cao → thấp</option>
+                            <option value="quantity">Số lượng bán nhiều → ít</option>
+                            <option value="recovery">Hồi vốn % cao → thấp</option>
                         </select>
                     </div>
 
                     {/* Info boxes */}
                     {productPerformance.filter(p => p.recommendation === 'BUY_MORE').length === 0 && (
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 mb-4">
+                        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-4">
                             <div className="flex items-start gap-3">
-                                <div className="bg-blue-500 rounded-lg p-2 shrink-0">
+                                <div className="bg-primary rounded-lg p-2 shrink-0">
                                     <Sparkles className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-blue-900 font-bold">Chưa có sản phẩm đề xuất nhập thêm</div>
-                                    <div className="text-blue-700 text-sm mt-1">
-                                        Điều kiện: Lời (≥100%) + Bán chạy (top 30%) + Tồn {'<'} 10
+                                    <div className="text-primary font-bold">Chưa có đề xuất nhập thêm</div>
+                                    <div className="text-orange-700 text-sm mt-1">
+                                        Cần: Lời {'>'} 100% + Bán chạy + Tồn {'<'} 10
                                     </div>
                                 </div>
                             </div>
@@ -498,14 +495,14 @@ export default function BaoCaoPage() {
                     )}
 
                     {productPerformance.every(p => p.profit_status === 'PROFIT') && productPerformance.length > 0 && (
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-200 rounded-xl p-4 mb-4">
+                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
                             <div className="flex items-start gap-3">
                                 <div className="bg-green-500 rounded-lg p-2 shrink-0">
                                     <CheckCircle2 className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-green-900 font-bold">Tất cả sản phẩm đều lời!</div>
-                                    <div className="text-green-700 text-sm mt-1">Kinh doanh hiệu quả. Tiếp tục phát huy!</div>
+                                    <div className="text-green-800 font-bold">Tất cả sản phẩm đều lời!</div>
+                                    <div className="text-green-600 text-sm mt-1">Kinh doanh hiệu quả. Tiếp tục phát huy!</div>
                                 </div>
                             </div>
                         </div>
@@ -514,7 +511,7 @@ export default function BaoCaoPage() {
                     {/* Product Cards */}
                     <div className="space-y-4">
                         {productPerformance.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500">
+                            <div className="text-center py-12 text-gray-400 font-medium">
                                 Chưa có dữ liệu sản phẩm
                             </div>
                         ) : (
@@ -534,34 +531,34 @@ export default function BaoCaoPage() {
                                     return (
                                         <div
                                             key={product.product_id}
-                                            className="border-2 rounded-lg overflow-hidden bg-white"
+                                            className="clay-card overflow-hidden"
                                         >
                                             {/* Header */}
-                                            <div className="bg-white p-3 border-b-2 border-gray-200">
-                                                <h3 className="font-bold text-xl text-gray-900">{product.product_name}</h3>
+                                            <div className="p-4 border-b border-orange-100 bg-white">
+                                                <h3 className="font-bold text-xl text-foreground">{product.product_name}</h3>
                                             </div>
 
-                                            {/* Section 1: Blue bg */}
-                                            <div className="bg-gradient-to-br from-blue-50 to-white p-4 border-b border-blue-100">
+                                            {/* Section 1: Revenue */}
+                                            <div className="p-4 border-b border-orange-100 bg-orange-50/30">
                                                 <div className="flex items-center gap-2 mb-3">
-                                                    <BarChart3 className="w-4 h-4 text-blue-600" />
-                                                    <h4 className="text-sm font-bold text-blue-900 uppercase tracking-wide">DOANH THU & BÁN</h4>
+                                                    <BarChart3 className="w-4 h-4 text-primary" />
+                                                    <h4 className="text-sm font-bold text-primary uppercase tracking-wide">DOANH THU & BÁN</h4>
                                                 </div>
                                                 <div className="space-y-3">
-                                                    <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                                        <span className="text-sm font-semibold text-gray-800">Doanh thu:</span>
-                                                        <span className="font-bold text-2xl text-blue-600">
+                                                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-orange-100">
+                                                        <span className="text-sm font-semibold text-gray-600">Doanh thu:</span>
+                                                        <span className="font-bold text-2xl text-primary">
                                                             {formatCurrency(product.revenue)}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-medium text-gray-800">Số lượng bán:</span>
-                                                        <span className="font-bold text-gray-900">
+                                                        <span className="text-sm font-medium text-gray-600">Số lượng bán:</span>
+                                                        <span className="font-bold text-foreground">
                                                             {product.quantity_sold} cái
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-medium text-gray-800">Lãi:</span>
+                                                        <span className="text-sm font-medium text-gray-600">Lãi:</span>
                                                         <span className={`font-bold ${product.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                             {formatCurrency(product.profit)}
                                                         </span>
@@ -569,18 +566,18 @@ export default function BaoCaoPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Section 2: Yellow bg */}
-                                            <div className="bg-gradient-to-br from-amber-50 to-white p-4">
+                                            {/* Section 2: Status */}
+                                            <div className="p-4 bg-white">
                                                 <div className="flex items-center gap-2 mb-3">
                                                     <Activity className="w-4 h-4 text-amber-600" />
-                                                    <h4 className="text-sm font-bold text-amber-900 uppercase tracking-wide">TRẠNG THÁI</h4>
+                                                    <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wide">TRẠNG THÁI</h4>
                                                 </div>
                                                 <div className="space-y-3">
                                                     {/* Progress Bar */}
-                                                    <div className="p-3 bg-white rounded-lg">
+                                                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                                                         <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-sm font-semibold text-gray-800">Hồi vốn:</span>
-                                                            <span className="font-bold text-xl text-gray-900">
+                                                            <span className="text-sm font-semibold text-gray-600">Hồi vốn:</span>
+                                                            <span className="font-bold text-xl text-foreground">
                                                                 {hoiVonPercent.toFixed(0)}%
                                                             </span>
                                                         </div>
@@ -594,11 +591,11 @@ export default function BaoCaoPage() {
 
                                                     {/* Status Badge */}
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-medium text-gray-800">Tình trạng:</span>
-                                                        <span className={`font-bold px-3 py-1.5 rounded-lg shadow-sm ${
-                                                            product.profit_status === 'PROFIT' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                                            product.profit_status === 'BREAKING_EVEN' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                                                            'bg-red-100 text-red-800 border border-red-300'
+                                                        <span className="text-sm font-medium text-gray-600">Tình trạng:</span>
+                                                        <span className={`font-bold px-3 py-1.5 rounded-lg text-sm ${
+                                                            product.profit_status === 'PROFIT' ? 'bg-green-100 text-green-700' :
+                                                            product.profit_status === 'BREAKING_EVEN' ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-red-100 text-red-700'
                                                         }`}>
                                                             {product.profit_status === 'PROFIT' ? 'CÓ LỜI' :
                                                              product.profit_status === 'BREAKING_EVEN' ? 'HÒA VỐN' : 'LỖ VỐN'}
@@ -607,8 +604,8 @@ export default function BaoCaoPage() {
 
                                                     {/* Stock */}
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm font-medium text-gray-800">Tồn kho:</span>
-                                                        <span className={`font-bold ${product.stock < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                                                        <span className="text-sm font-medium text-gray-600">Tồn kho:</span>
+                                                        <span className={`font-bold ${product.stock < 0 ? 'text-red-600' : 'text-foreground'}`}>
                                                             {product.stock < 0 ? (
                                                                 <span className="flex items-center gap-1">
                                                                     <AlertTriangle className="w-4 h-4" />
@@ -622,20 +619,20 @@ export default function BaoCaoPage() {
 
                                                     {/* Recommendation */}
                                                     {product.recommendation && (
-                                                        <div className="mt-2 pt-2 border-t border-amber-200">
-                                            <div className={`flex items-center justify-center gap-2 font-bold py-2.5 px-3 rounded-lg shadow-sm ${
+                                                        <div className="mt-2 pt-2 border-t border-gray-100">
+                                            <div className={`flex items-center justify-center gap-2 font-bold py-2.5 px-3 rounded-xl shadow-sm text-sm ${
                                                 product.recommendation === 'BUY_MORE' 
-                                                    ? 'bg-green-100 text-green-800 border-2 border-green-300' 
-                                                    : 'bg-red-100 text-red-800 border-2 border-red-300'
+                                                    ? 'bg-green-50 text-green-700 border border-green-200' 
+                                                    : 'bg-red-50 text-red-700 border border-red-200'
                                             }`}>
                                                 {product.recommendation === 'BUY_MORE' ? (
                                                     <>
-                                                        <TrendingUp className="w-5 h-5" />
+                                                        <TrendingUp className="w-4 h-4" />
                                                         <span>NHẬP THÊM HÀNG</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <TrendingDown className="w-5 h-5" />
+                                                        <TrendingDown className="w-4 h-4" />
                                                         <span>NGƯNG NHẬP HÀNG</span>
                                                     </>
                                                 )}
@@ -645,12 +642,12 @@ export default function BaoCaoPage() {
 
                                                     {/* Edge cases */}
                                                     {!product.has_imports && (
-                                                        <div className="bg-gray-100 px-2 py-1 rounded text-xs text-center">
+                                                        <div className="bg-gray-100 px-2 py-1 rounded text-xs text-center text-gray-500 font-medium">
                                                             Chưa nhập hàng
                                                         </div>
                                                     )}
                                                     {product.has_imports && !product.has_sales && (
-                                                        <div className="bg-yellow-100 px-2 py-1 rounded text-xs text-center">
+                                                        <div className="bg-yellow-50 px-2 py-1 rounded text-xs text-center text-yellow-700 font-medium">
                                                             Chưa bán được
                                                         </div>
                                                     )}
@@ -668,16 +665,16 @@ export default function BaoCaoPage() {
             {activeTab === 'time' && (
                 <div className="space-y-6">
                     {/* Filters */}
-                    <div className="bg-white p-4 rounded-xl border-2 border-blue-100 shadow-sm">
+                    <div className="clay-card p-4">
                         <div className="flex items-center gap-2 mb-3">
-                            <Calendar className="w-4 h-4 text-blue-600" />
-                            <label className="text-sm font-bold text-gray-900">Lọc theo thời gian:</label>
+                            <Calendar className="w-4 h-4 text-primary" />
+                            <label className="text-sm font-bold text-foreground">Lọc theo thời gian:</label>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <select
                                 value={selectedYear}
                                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                className="px-4 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-900 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                className="px-4 py-2.5 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
                             >
                                 {yearlyData.map(y => (
                                     <option key={y.year} value={y.year} className="font-semibold text-gray-900">{y.year}</option>
@@ -687,7 +684,7 @@ export default function BaoCaoPage() {
                             <select
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                className="px-4 py-2.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-gray-900 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                className="px-4 py-2.5 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
                             >
                                 <option value="all" className="font-semibold text-gray-900">Tất cả tháng</option>
                                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
@@ -712,90 +709,100 @@ export default function BaoCaoPage() {
                             <>
                                 {/* KPI Cards */}
                                 <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border-2 border-blue-200 shadow-sm">
+                                    <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm">
                                         <div className="flex items-center gap-1.5 mb-1">
-                                            <ArrowDownCircle className="w-4 h-4 text-blue-600" />
-                                            <div className="text-sm font-semibold text-gray-800">Chi nhập</div>
+                                            <ArrowDownCircle className="w-4 h-4 text-primary" />
+                                            <div className="text-xs font-bold text-gray-500 uppercase">Chi nhập</div>
                                         </div>
-                                        <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalChiNhap)}</div>
+                                        <div className="text-lg font-black text-primary truncate">{formatCurrency(totalChiNhap)}</div>
                                     </div>
-                                    <div className="bg-gradient-to-br from-green-50 to-white p-4 rounded-xl border-2 border-green-200 shadow-sm">
+                                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm">
                                         <div className="flex items-center gap-1.5 mb-1">
                                             <ArrowUpCircle className="w-4 h-4 text-green-600" />
-                                            <div className="text-sm font-semibold text-gray-800">Doanh thu</div>
+                                            <div className="text-xs font-bold text-gray-500 uppercase">Doanh thu</div>
                                         </div>
-                                        <div className="text-2xl font-bold text-green-600">{formatCurrency(totalDoanhThu)}</div>
+                                        <div className="text-lg font-black text-green-600 truncate">{formatCurrency(totalDoanhThu)}</div>
                                     </div>
-                                    <div className="bg-gradient-to-br from-amber-50 to-white p-4 rounded-xl border-2 border-amber-200 shadow-sm">
+                                    <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
                                         <div className="flex items-center gap-1.5 mb-1">
-                                            <Sparkles className="w-4 h-4 text-amber-600" />
-                                            <div className="text-sm font-semibold text-gray-800">Lãi</div>
+                                            <Sparkles className="w-4 h-4 text-amber-500" />
+                                            <div className="text-xs font-bold text-gray-500 uppercase">Lãi</div>
                                         </div>
-                                        <div className="text-2xl font-bold text-amber-600">{formatCurrency(totalLai)}</div>
+                                        <div className="text-lg font-black text-amber-600 truncate">{formatCurrency(totalLai)}</div>
                                     </div>
                                 </div>
 
                                 {filteredData.length === 0 ? (
-                                    <div className="text-center py-12 text-gray-500">
+                                    <div className="text-center py-12 text-gray-400 font-medium">
                                         Chưa có dữ liệu năm {selectedYear}
                                     </div>
                                 ) : (
                                     <>
                                         {/* Chart 1: Bar chart - Chi nhập vs Doanh thu */}
-                                        <div className="bg-white p-5 rounded-2xl border-2 border-blue-100 shadow-md">
+                                        <div className="clay-card p-5">
                                             <div className="flex items-center gap-2 mb-4">
-                                                <BarChart3 className="w-5 h-5 text-blue-600" />
-                                                <h3 className="text-lg font-bold text-gray-900">Chi nhập vs Doanh thu</h3>
+                                                <BarChart3 className="w-5 h-5 text-primary" />
+                                                <h3 className="text-lg font-bold text-foreground">Chi Nhập vs Doanh Thu</h3>
                                             </div>
                                             <ResponsiveContainer width="100%" height={300}>
                                                 <BarChart data={filteredData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" vertical={false} />
                                                     <XAxis 
                                                         dataKey="month" 
-                                                        tick={{ fill: '#374151', fontSize: 13, fontWeight: 600 }}
+                                                        tick={{ fill: '#431407', fontSize: 12, fontWeight: 600 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
                                                     />
                                                     <YAxis 
-                                                        tick={{ fill: '#374151', fontSize: 13, fontWeight: 600 }}
+                                                        tick={{ fill: '#431407', fontSize: 12, fontWeight: 600 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tickFormatter={(value) => `${value / 1000000}M`}
                                                     />
-                                                    <Tooltip content={<CustomTooltip />} />
+                                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff7ed' }} />
                                                     <Legend 
                                                         wrapperStyle={{ 
                                                             paddingTop: '20px',
                                                             fontWeight: 600,
-                                                            color: '#111827'
+                                                            color: '#431407'
                                                         }}
                                                     />
-                                                    <Bar dataKey="chi_nhap" fill="#3b82f6" name="Chi nhập" />
-                                                    <Bar dataKey="doanh_thu" fill="#10b981" name="Doanh thu" />
+                                                    <Bar dataKey="chi_nhap" fill="#F97316" name="Chi nhập" radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="doanh_thu" fill="#10B981" name="Doanh thu" radius={[4, 4, 0, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
 
                                         {/* Chart 2: Line chart - Xu hướng lãi */}
-                                        <div className="bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-md">
+                                        <div className="clay-card p-5 border-amber-200">
                                             <div className="flex items-center gap-2 mb-4">
                                                 <TrendingUp className="w-5 h-5 text-amber-600" />
-                                                <h3 className="text-lg font-bold text-gray-900">Xu hướng Lãi</h3>
+                                                <h3 className="text-lg font-bold text-foreground">Xu Hướng Lãi</h3>
                                             </div>
                                             <ResponsiveContainer width="100%" height={300}>
                                                 <LineChart data={filteredData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#fed7aa" vertical={false} />
                                                     <XAxis 
                                                         dataKey="month" 
-                                                        tick={{ fill: '#374151', fontSize: 13, fontWeight: 600 }}
+                                                        tick={{ fill: '#431407', fontSize: 12, fontWeight: 600 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
                                                     />
                                                     <YAxis 
-                                                        tick={{ fill: '#374151', fontSize: 13, fontWeight: 600 }}
+                                                        tick={{ fill: '#431407', fontSize: 12, fontWeight: 600 }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tickFormatter={(value) => `${value / 1000000}M`}
                                                     />
                                                     <Tooltip content={<CustomTooltip />} />
                                                     <Legend 
                                                         wrapperStyle={{ 
                                                             paddingTop: '20px',
                                                             fontWeight: 600,
-                                                            color: '#111827'
+                                                            color: '#431407'
                                                         }}
                                                     />
-                                                    <Line type="monotone" dataKey="lai" stroke="#f59e0b" strokeWidth={3} name="Lãi" />
+                                                    <Line type="monotone" dataKey="lai" stroke="#F59E0B" strokeWidth={3} name="Lãi" dot={{ r: 4, fill: '#F59E0B', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                                                 </LineChart>
                                             </ResponsiveContainer>
                                         </div>

@@ -41,3 +41,13 @@ yarn-error.log*
 next-env.d.ts
 *.jsonlib/google-key.json
 quan-ly-chi-hong-5b01741f9e74.json
+
+# AI & Agent Artifacts
+.opencode/
+.sisyphus/
+AGENTS.md
+
+# Local assets
+*.png
+*.jpg
+*.jpeg

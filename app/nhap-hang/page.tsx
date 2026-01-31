@@ -34,6 +34,7 @@ function NhapHangContent() {
     const [globalProfitMargin, setGlobalProfitMargin] = useState(50); // Default 50%
     const [globalAlertThreshold, setGlobalAlertThreshold] = useState(10); // Default 10
     const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+    const [customUnit, setCustomUnit] = useState('');
 
     const dateInputRef = useRef<HTMLInputElement>(null);
     const soLuongRef = useRef<HTMLInputElement>(null);
@@ -144,15 +145,18 @@ function NhapHangContent() {
         setSelectedProductId(product.id);
         setSearchTerm(product.ten_hang);
         setIsDropdownOpen(false);
+        setCustomUnit(product.don_vi || 'cái');
         setTimeout(() => soLuongRef.current?.focus(), 100);
     };
 
     const handleUpdateUnit = async (newUnit: string) => {
-        if (!selectedProduct) return;
+        if (!selectedProduct || !newUnit.trim()) return;
+        
+        setCustomUnit(newUnit);
         
         const { error } = await supabase
             .from('products')
-            .update({ don_vi: newUnit })
+            .update({ don_vi: newUnit.trim() })
             .eq('id', selectedProduct.id);
         
         if (!error) {
@@ -434,10 +438,18 @@ function NhapHangContent() {
                             <div className="flex items-center gap-1">
                                 <input
                                     type="text"
-                                    value={selectedProduct?.don_vi || 'cái'}
-                                    onChange={(e) => {
-                                        if (selectedProduct) {
+                                    value={customUnit}
+                                    onChange={(e) => setCustomUnit(e.target.value)}
+                                    onBlur={(e) => {
+                                        if (selectedProduct && e.target.value.trim()) {
                                             handleUpdateUnit(e.target.value);
+                                        }
+                                    }}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter' && selectedProduct && customUnit.trim()) {
+                                            e.preventDefault();
+                                            handleUpdateUnit(customUnit);
+                                            (e.target as HTMLInputElement).blur();
                                         }
                                     }}
                                     disabled={!selectedProduct}

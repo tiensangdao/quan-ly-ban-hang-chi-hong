@@ -33,13 +33,18 @@ function NhapHangContent() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [globalProfitMargin, setGlobalProfitMargin] = useState(50); // Default 50%
     const [globalAlertThreshold, setGlobalAlertThreshold] = useState(10); // Default 10
+    const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
 
     const dateInputRef = useRef<HTMLInputElement>(null);
     const soLuongRef = useRef<HTMLInputElement>(null);
     const thanhTienRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const unitDropdownRef = useRef<HTMLDivElement>(null);
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
+
+    // Common units
+    const commonUnits = ['cái', 'hộp', 'thùng', 'kg', 'lít', 'chai', 'túi', 'bộ', 'chiếc', 'đôi'];
 
     const filteredProducts = useMemo(() => {
         return products.filter(p =>
@@ -100,6 +105,23 @@ function NhapHangContent() {
         };
     }, [isDropdownOpen]);
 
+    // Close unit dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+                setIsUnitDropdownOpen(false);
+            }
+        };
+
+        if (isUnitDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isUnitDropdownOpen]);
+
     // Auto-fill product from URL params
     useEffect(() => {
         const productName = searchParams.get('product');
@@ -123,6 +145,20 @@ function NhapHangContent() {
         setSearchTerm(product.ten_hang);
         setIsDropdownOpen(false);
         setTimeout(() => soLuongRef.current?.focus(), 100);
+    };
+
+    const handleUpdateUnit = async (newUnit: string) => {
+        if (!selectedProduct) return;
+        
+        const { error } = await supabase
+            .from('products')
+            .update({ don_vi: newUnit })
+            .eq('id', selectedProduct.id);
+        
+        if (!error) {
+            await fetchProducts();
+            setIsUnitDropdownOpen(false);
+        }
     };
 
     const handleCreateNewProduct = async (tenHang: string, giaHap: number) => {
@@ -394,7 +430,45 @@ function NhapHangContent() {
                             placeholder="0"
                             className="flex-1 px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-center text-foreground font-bold text-xl transition-all outline-none"
                         />
-                        <span className="text-foreground font-bold text-lg">{selectedProduct?.don_vi || 'cái'}</span>
+                        <div className="relative min-w-[100px]" ref={unitDropdownRef}>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="text"
+                                    value={selectedProduct?.don_vi || 'cái'}
+                                    onChange={(e) => {
+                                        if (selectedProduct) {
+                                            handleUpdateUnit(e.target.value);
+                                        }
+                                    }}
+                                    disabled={!selectedProduct}
+                                    className="w-20 px-2 py-1 text-center border-2 border-gray-200 rounded-lg font-bold text-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                    placeholder="cái"
+                                />
+                                <button
+                                    onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
+                                    className="p-1 hover:bg-orange-50 rounded-lg transition-colors"
+                                    disabled={!selectedProduct}
+                                >
+                                    <ChevronDown className="w-5 h-5 text-primary" />
+                                </button>
+                            </div>
+                            
+                            {isUnitDropdownOpen && selectedProduct && (
+                                <div className="absolute z-10 right-0 mt-2 bg-white border-2 border-orange-100 rounded-xl shadow-2xl min-w-[120px] overflow-hidden">
+                                    {commonUnits.map((unit) => (
+                                        <button
+                                            key={unit}
+                                            onClick={() => handleUpdateUnit(unit)}
+                                            className={`w-full px-4 py-2.5 text-left hover:bg-orange-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                                                unit === selectedProduct?.don_vi ? 'bg-orange-100 font-bold text-primary' : 'font-medium'
+                                            }`}
+                                        >
+                                            {unit}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

@@ -25,8 +25,8 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-orange-200 shadow-lg z-50 pb-safe">
-            <div className="flex justify-around items-center max-w-2xl mx-auto h-16 px-2">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-orange-200 shadow-lg z-50 pb-safe" suppressHydrationWarning>
+            <div className="flex justify-around items-center max-w-2xl mx-auto h-16 px-2" suppressHydrationWarning>
                 {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -39,12 +39,11 @@ export default function BottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 ${
-                                isActive ? activeColor + ' font-bold scale-105' : inactiveColor
-                            }`}
+                            className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl transition-all duration-200 ${isActive ? activeColor + ' font-bold scale-105' : inactiveColor
+                                }`}
                             suppressHydrationWarning
                         >
-                            <div 
+                            <div
                                 className={`${item.highlight ? `${bgColor} rounded-full p-2 clay-icon-bg transition-all duration-200` : ''} ${isActive && item.highlight ? 'shadow-sm ring-1 ring-orange-200' : ''}`}
                                 suppressHydrationWarning
                             >

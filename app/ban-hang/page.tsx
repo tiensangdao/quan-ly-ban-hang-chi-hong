@@ -10,6 +10,8 @@ interface Product {
     ten_hang: string;
     don_vi: string;
     gia_nhap_gan_nhat: number;
+    gia_nhap_trung_binh?: number;
+    ty_le_lai_mac_dinh?: number;
 }
 
 export default function BanHangPage() {
@@ -26,10 +28,13 @@ export default function BanHangPage() {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [giaBanGoiY, setGiaBanGoiY] = useState(0);
+    const [globalProfitMargin, setGlobalProfitMargin] = useState(50); // Default 50%
+    const [priceCalculationMode, setPriceCalculationMode] = useState<'gia_gan_nhat' | 'gia_trung_binh'>('gia_trung_binh');
 
     const dateInputRef = useRef<HTMLInputElement>(null);
     const soLuongRef = useRef<HTMLInputElement>(null);
     const giaBanRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
     const currentInventory = selectedProductId ? (inventory[selectedProductId] || 0) : 0;
@@ -58,9 +63,42 @@ export default function BanHangPage() {
     }, [selectedProduct, soLuong, giaBan]);
 
     useEffect(() => {
+        fetchSettings();
         fetchProducts();
         fetchInventory();
     }, []);
+
+    const fetchSettings = async () => {
+        const { data } = await supabase
+            .from('app_settings')
+            .select('ty_le_lai_mac_dinh, gia_ban_tinh_theo')
+            .eq('id', 1)
+            .single();
+        
+        if (data?.ty_le_lai_mac_dinh) {
+            setGlobalProfitMargin(data.ty_le_lai_mac_dinh);
+        }
+        if (data?.gia_ban_tinh_theo) {
+            setPriceCalculationMode(data.gia_ban_tinh_theo);
+        }
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        if (isDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isDropdownOpen]);
 
     const fetchProducts = async () => {
         const { data } = await supabase.from('products').select('*').eq('active', true);
@@ -89,24 +127,38 @@ export default function BanHangPage() {
         setSearchTerm(product.ten_hang);
         setIsDropdownOpen(false);
 
-        const { data } = await supabase
-            .from('nhap_hang')
-            .select('gia_ban_goi_y')
-            .eq('product_id', product.id)
-            .order('ngay_thang', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (data?.gia_ban_goi_y) {
-            setGiaBanGoiY(data.gia_ban_goi_y);
-            setGiaBan(data.gia_ban_goi_y.toString());
-        } else {
-            setGiaBanGoiY(0);
-            setGiaBan('');
-        }
-
+        calculateRecommendedPrice(product);
         setTimeout(() => soLuongRef.current?.focus(), 100);
     };
+
+    const calculateRecommendedPrice = (product: Product) => {
+        // Calculate recommended price based on settings
+        let basePrice: number;
+        
+        if (priceCalculationMode === 'gia_trung_binh') {
+            // Use WAC (Weighted Average Cost) if available, otherwise last import price
+            basePrice = product.gia_nhap_trung_binh && product.gia_nhap_trung_binh > 0 
+                ? product.gia_nhap_trung_binh 
+                : product.gia_nhap_gan_nhat;
+        } else {
+            // Use last import price
+            basePrice = product.gia_nhap_gan_nhat;
+        }
+        
+        const profitMargin = product.ty_le_lai_mac_dinh || globalProfitMargin;
+        const multiplier = 1 + (profitMargin / 100);
+        const recommendedPrice = Math.round(basePrice * multiplier);
+
+        setGiaBanGoiY(recommendedPrice);
+        setGiaBan(recommendedPrice.toString());
+    };
+
+    // Recalculate when calculation mode changes
+    useEffect(() => {
+        if (selectedProduct) {
+            calculateRecommendedPrice(selectedProduct);
+        }
+    }, [priceCalculationMode, globalProfitMargin]);
 
     const handleSave = async () => {
         if (!selectedProductId || !soLuong || !giaBan) {
@@ -220,7 +272,7 @@ export default function BanHangPage() {
                     </div>
                 </div>
 
-                <div className="relative clay-card p-5">
+                <div className="relative clay-card p-5" ref={dropdownRef}>
                     <label className="block text-sm font-bold text-foreground mb-3 flex items-center gap-2">
                         <Search className="w-5 h-5 text-primary" />
                         Sản phẩm
@@ -248,7 +300,7 @@ export default function BanHangPage() {
                     </div>
 
                     {isDropdownOpen && filteredProducts.length > 0 && (
-                        <div className="absolute z-10 w-full mt-2 bg-white border-2 border-orange-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-2 bg-white border-2 border-orange-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto left-0 right-0">
                             {filteredProducts.map((product) => (
                                 <button
                                     key={product.id}
@@ -267,14 +319,32 @@ export default function BanHangPage() {
 
                     {selectedProduct && (
                         <div className="mt-3 space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-primary font-bold bg-orange-50 p-3 rounded-xl border border-orange-200">
-                                <Lightbulb className="w-5 h-5" />
-                                Giá nhập: {formatCurrency(selectedProduct.gia_nhap_gan_nhat)} | Tồn: {currentInventory} {selectedProduct.don_vi}
-                            </div>
+                            {selectedProduct.gia_nhap_trung_binh && selectedProduct.gia_nhap_trung_binh > 0 ? (
+                                <>
+                                    <div className="flex items-center gap-2 text-sm text-blue-700 font-bold bg-blue-50 p-3 rounded-xl border border-blue-200">
+                                        <DollarSign className="w-5 h-5" />
+                                        Giá nhập TB: {formatCurrency(selectedProduct.gia_nhap_trung_binh)} | Tồn: {currentInventory} {selectedProduct.don_vi}
+                                    </div>
+                                    {selectedProduct.gia_nhap_gan_nhat !== selectedProduct.gia_nhap_trung_binh && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                            <Info className="w-4 h-4" />
+                                            Giá nhập gần nhất: {formatCurrency(selectedProduct.gia_nhap_gan_nhat)}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-2 text-sm text-primary font-bold bg-orange-50 p-3 rounded-xl border border-orange-200">
+                                    <Lightbulb className="w-5 h-5" />
+                                    Giá nhập: {formatCurrency(selectedProduct.gia_nhap_gan_nhat)} | Tồn: {currentInventory} {selectedProduct.don_vi}
+                                </div>
+                            )}
                             {giaBanGoiY > 0 && (
                                 <div className="flex items-center gap-2 text-sm text-green-700 font-bold bg-green-50 p-3 rounded-xl border border-green-200">
                                     <Sparkles className="w-5 h-5" />
                                     Giá bán khuyến nghị: {formatCurrency(giaBanGoiY)}
+                                    <span className="text-xs text-green-600 ml-auto">
+                                        (+{selectedProduct.ty_le_lai_mac_dinh || globalProfitMargin}%)
+                                    </span>
                                 </div>
                             )}
                         </div>

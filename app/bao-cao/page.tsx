@@ -12,7 +12,7 @@ import {
     TrendingUp, TrendingDown, PackageCheck, ShoppingCart, 
     DollarSign, AlertTriangle, CheckCircle2, XCircle, 
     ArrowUpCircle, ArrowDownCircle, Package, Calendar,
-    Filter, BarChart3, Activity, Sparkles, Clock
+    Filter, BarChart3, Activity, Sparkles, Clock, Search
 } from 'lucide-react';
 
 // ============= TYPES =============
@@ -60,14 +60,15 @@ interface SparklineDataPoint {
 interface ProductPerformance {
     product_id: string;
     product_name: string;
-    revenue: number;
-    profit: number;
-    quantity_sold: number;
-    stock: number;
-    recovery_percent: number;
+    revenue: number;  // Doanh thu trong kỳ (filtered)
+    profit: number;   // Lãi trong kỳ (filtered)
+    quantity_sold: number;  // Số lượng bán trong kỳ (filtered)
+    stock: number;  // Tồn kho hiện tại (all-time)
+    recovery_percent: number;  // % hồi vốn toàn thời gian
     is_top_30: boolean;
     is_bottom_30: boolean;
-    total_cost: number;
+    total_cost: number;  // Chi nhập trong kỳ (filtered)
+    total_cost_alltime?: number;  // Tổng chi nhập toàn thời gian
     recommendation?: 'BUY_MORE' | 'STOP_BUYING';
     profit_status: 'PROFIT' | 'BREAKING_EVEN' | 'LOSS';
     has_imports: boolean;
@@ -81,10 +82,12 @@ interface ProductPerformance {
     forecast_days_until_depletion?: number | null;
     forecast_message?: string;
     // Pricing fields
-    avg_import_price?: number;  // Giá nhập TB
-    avg_sale_price?: number;    // Giá bán TB
+    avg_import_price?: number;  // Giá nhập TB (all-time)
+    avg_sale_price?: number;    // Giá bán TB (all-time)
     profit_per_unit?: number;   // Lời/Lỗ mỗi cái
-    quantity_imported?: number; // Tổng số lượng nhập
+    quantity_imported?: number; // Tổng số lượng nhập (all-time)
+    revenue_alltime?: number;   // Tổng doanh thu toàn thời gian
+    quantity_sold_alltime?: number; // Tổng số lượng bán toàn thời gian
 }
 
 interface NhapHangRecord {
@@ -270,6 +273,7 @@ export default function BaoCaoPage() {
     const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'quantity' | 'recovery'>('revenue');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Initial load
     useEffect(() => {
@@ -295,7 +299,7 @@ export default function BaoCaoPage() {
             };
             loadProductData();
         }
-    }, [dateFilter]);
+    }, [activeTab, dateFilter]);
 
     // Load time tab data when switching to time tab or year changes
     useEffect(() => {
@@ -353,9 +357,9 @@ export default function BaoCaoPage() {
             .gte('ngay_ban', prevStart)
             .lte('ngay_ban', prevEnd);
 
-        // Fetch all-time data for stock calculation
-        const { data: allNhapData } = await supabase.from('nhap_hang').select('product_id, so_luong');
-        const { data: allBanData } = await supabase.from('ban_hang').select('product_id, so_luong');
+        // Fetch all-time data for stock calculation AND average price calculation
+        const { data: allNhapData } = await supabase.from('nhap_hang').select('product_id, so_luong, don_gia');
+        const { data: allBanData } = await supabase.from('ban_hang').select('product_id, so_luong, gia_ban');
 
         // Fetch last 30 days sales for forecasting
         const thirtyDaysAgo = new Date();
@@ -394,6 +398,9 @@ export default function BaoCaoPage() {
                 is_top_30: false,
                 is_bottom_30: false,
                 total_cost: 0,
+                total_cost_alltime: 0,
+                revenue_alltime: 0,
+                quantity_sold_alltime: 0,
                 profit_status: 'LOSS',
                 has_imports: false,
                 has_sales: false,
@@ -411,11 +418,41 @@ export default function BaoCaoPage() {
             };
         });
 
-        // Aggregate current period
+        // Calculate all-time totals for average prices and recovery (not affected by date filter)
+        const allTimeTotals: Record<string, { totalImportValue: number; totalImportQty: number; totalSaleValue: number; totalSaleQty: number }> = {};
+        
+        allNhapData?.forEach(item => {
+            if (!allTimeTotals[item.product_id]) {
+                allTimeTotals[item.product_id] = { totalImportValue: 0, totalImportQty: 0, totalSaleValue: 0, totalSaleQty: 0 };
+            }
+            allTimeTotals[item.product_id].totalImportValue += item.so_luong * item.don_gia;
+            allTimeTotals[item.product_id].totalImportQty += item.so_luong;
+            
+            // Also update performanceMap with all-time totals
+            if (performanceMap[item.product_id]) {
+                performanceMap[item.product_id].total_cost_alltime! += item.so_luong * item.don_gia;
+                performanceMap[item.product_id].quantity_imported! += item.so_luong;
+            }
+        });
+
+        allBanData?.forEach(item => {
+            if (!allTimeTotals[item.product_id]) {
+                allTimeTotals[item.product_id] = { totalImportValue: 0, totalImportQty: 0, totalSaleValue: 0, totalSaleQty: 0 };
+            }
+            allTimeTotals[item.product_id].totalSaleValue += item.so_luong * item.gia_ban;
+            allTimeTotals[item.product_id].totalSaleQty += item.so_luong;
+            
+            // Also update performanceMap with all-time revenue and quantity
+            if (performanceMap[item.product_id]) {
+                performanceMap[item.product_id].revenue_alltime! += item.so_luong * item.gia_ban;
+                performanceMap[item.product_id].quantity_sold_alltime! += item.so_luong;
+            }
+        });
+
+        // Aggregate current period (for filtered revenue/profit/quantity)
         currentNhapData?.forEach(item => {
             if (performanceMap[item.product_id]) {
                 performanceMap[item.product_id].total_cost += item.so_luong * item.don_gia;
-                performanceMap[item.product_id].quantity_imported! += item.so_luong;
                 performanceMap[item.product_id].has_imports = true;
             }
         });
@@ -497,22 +534,29 @@ export default function BaoCaoPage() {
 
         // Calculate metrics and comparisons
         Object.values(performanceMap).forEach(p => {
-            p.profit = p.revenue - p.total_cost;
-            p.recovery_percent = p.total_cost > 0 
-                ? Math.min((p.revenue / p.total_cost) * 100, 100)
-                : 0;
+            // Calculate average prices using ALL-TIME data (not filtered by date)
+            const allTimeData = allTimeTotals[p.product_id];
+            if (allTimeData) {
+                if (allTimeData.totalImportQty > 0) {
+                    p.avg_import_price = roundNumber(allTimeData.totalImportValue / allTimeData.totalImportQty);
+                }
+                if (allTimeData.totalSaleQty > 0) {
+                    p.avg_sale_price = roundNumber(allTimeData.totalSaleValue / allTimeData.totalSaleQty);
+                }
+            }
             
-            // Calculate average prices
-            if (p.quantity_imported! > 0) {
-                p.avg_import_price = roundNumber(p.total_cost / p.quantity_imported!);
-            }
-            if (p.quantity_sold > 0) {
-                p.avg_sale_price = roundNumber(p.revenue / p.quantity_sold);
-            }
             // Calculate profit per unit
             if (p.avg_import_price! > 0 && p.avg_sale_price! > 0) {
                 p.profit_per_unit = roundNumber(p.avg_sale_price! - p.avg_import_price!);
             }
+            
+            // Recovery percent uses ALL-TIME data (how much we've recovered of all investments)
+            p.recovery_percent = (p.total_cost_alltime || 0) > 0 
+                ? Math.min(((p.revenue_alltime || 0) / (p.total_cost_alltime || 0)) * 100, 100)
+                : 0;
+            
+            // Profit in CURRENT period (filtered)
+            p.profit = p.revenue - p.total_cost;
             
             // Calculate previous profit (simplified - using revenue only)
             const prevProfit = (p.revenue_previous || 0) - p.total_cost;
@@ -522,6 +566,7 @@ export default function BaoCaoPage() {
             p.revenue_change_percent = calculatePercentChange(p.revenue, p.revenue_previous || 0);
             p.profit_change_percent = calculatePercentChange(p.profit, p.profit_previous || 0);
             
+            // Profit status based on ALL-TIME recovery
             if (p.recovery_percent >= 100) {
                 p.profit_status = 'PROFIT';
             } else if (p.recovery_percent >= 50) {
@@ -745,7 +790,16 @@ export default function BaoCaoPage() {
 
     // Memoize sorted product list to avoid re-sorting on every render
     const sortedProducts = useMemo(() => {
-        return [...productPerformance].sort((a, b) => {
+        // First filter by search term
+        let filtered = productPerformance;
+        if (searchTerm.trim()) {
+            filtered = productPerformance.filter(p => 
+                p.product_name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        
+        // Then sort
+        return [...filtered].sort((a, b) => {
             switch (sortBy) {
                 case 'revenue': return b.revenue - a.revenue;
                 case 'profit': return b.profit - a.profit;
@@ -754,7 +808,7 @@ export default function BaoCaoPage() {
                 default: return 0;
             }
         });
-    }, [productPerformance, sortBy]);
+    }, [productPerformance, sortBy, searchTerm]);
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -840,22 +894,40 @@ export default function BaoCaoPage() {
             {/* Tab 1: Phân tích Sản phẩm */}
             {activeTab === 'product' && (
                 <div className="space-y-6">
-                    {/* Sort Dropdown */}
-                    <div className="clay-card p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Filter className="w-4 h-4 text-primary" />
-                            <label className="text-sm font-bold text-foreground">Sắp xếp theo:</label>
+                    {/* Search and Sort */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Product Search */}
+                        <div className="clay-card p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Search className="w-4 h-4 text-primary" />
+                                <label className="text-sm font-bold text-foreground">Tìm sản phẩm:</label>
+                            </div>
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Nhập tên sản phẩm..."
+                                className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
+                            />
                         </div>
-                        <select 
-                            value={sortBy} 
-                            onChange={(e) => setSortBy(e.target.value as any)}
-                            className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
-                        >
-                            <option value="revenue">Doanh thu cao → thấp</option>
-                            <option value="profit">Lãi cao → thấp</option>
-                            <option value="quantity">Số lượng bán nhiều → ít</option>
-                            <option value="recovery">Hồi vốn % cao → thấp</option>
-                        </select>
+
+                        {/* Sort Dropdown */}
+                        <div className="clay-card p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Filter className="w-4 h-4 text-primary" />
+                                <label className="text-sm font-bold text-foreground">Sắp xếp theo:</label>
+                            </div>
+                            <select 
+                                value={sortBy} 
+                                onChange={(e) => setSortBy(e.target.value as any)}
+                                className="w-full px-4 py-3 border-2 border-orange-100 rounded-xl text-sm font-semibold text-foreground bg-white focus:border-primary focus:ring-2 focus:ring-orange-200 outline-none"
+                            >
+                                <option value="revenue">Doanh thu cao → thấp</option>
+                                <option value="profit">Lãi cao → thấp</option>
+                                <option value="quantity">Số lượng bán nhiều → ít</option>
+                                <option value="recovery">Hồi vốn % cao → thấp</option>
+                            </select>
+                        </div>
                     </div>
 
                     {/* Info boxes */}
@@ -966,45 +1038,44 @@ export default function BaoCaoPage() {
                                                     <h4 className="text-sm font-bold text-primary uppercase tracking-wide">Doanh thu & Bán</h4>
                                                 </div>
                                                 <div className="space-y-3">
-                                                    {/* Tổng chi nhập */}
+                                                    {/* Tổng chi nhập - ALL TIME */}
                                                     <div className="p-3 bg-white rounded-xl border border-red-100">
                                                         <div className="flex justify-between items-center">
                                                             <span className="text-sm font-semibold text-gray-600">Tổng chi nhập:</span>
                                                             <div className="font-bold text-lg text-red-600">
-                                                                {formatCurrency(product.total_cost)}
+                                                                {formatCurrency(product.total_cost_alltime || 0)}
                                                             </div>
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* Doanh thu */}
+                                                    {/* Doanh thu - ALL TIME */}
                                                     <div className="p-3 bg-white rounded-xl border border-orange-100">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <span className="text-sm font-semibold text-gray-600">Doanh thu:</span>
                                                             <div className="text-right">
                                                                 <div className="font-bold text-xl text-primary">
-                                                                    {formatCurrency(product.revenue)}
+                                                                    {formatCurrency(product.revenue_alltime || 0)}
                                                                 </div>
-                                                                <ComparisonIndicator percentChange={product.revenue_change_percent} />
                                                             </div>
                                                         </div>
                                                     </div>
                                                     
+                                                    {/* Số lượng bán - ALL TIME */}
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-sm font-medium text-gray-600">Số lượng bán:</span>
                                                         <span className="font-bold text-foreground">
-                                                            {product.quantity_sold} cái
+                                                            {product.quantity_sold_alltime || 0} cái
                                                         </span>
                                                     </div>
                                                     
-                                                    {/* Lãi */}
+                                                    {/* Lãi - ALL TIME */}
                                                     <div className="p-3 bg-white rounded-xl border border-orange-100">
                                                         <div className="flex justify-between items-start">
                                                             <span className="text-sm font-semibold text-gray-600">Lãi:</span>
                                                             <div className="text-right">
-                                                                <div className={`font-bold text-xl ${product.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                                    {formatCurrency(product.profit)}
+                                                                <div className={`font-bold text-xl ${((product.revenue_alltime || 0) - (product.total_cost_alltime || 0)) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    {formatCurrency((product.revenue_alltime || 0) - (product.total_cost_alltime || 0))}
                                                                 </div>
-                                                                <ComparisonIndicator percentChange={product.profit_change_percent} />
                                                             </div>
                                                         </div>
                                                     </div>

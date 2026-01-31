@@ -24,6 +24,7 @@ interface Product {
   id: string;
   ten_hang: string;
   don_vi: string;
+  nguong_canh_bao?: number;
 }
 
 interface InventoryAlert {
@@ -57,6 +58,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<InventoryAlert[]>([]);
+  const [globalAlertThreshold, setGlobalAlertThreshold] = useState(5); // Default
   const [dailyStats, setDailyStats] = useState<DailyStats>({
     tong_nhap: 0,
     so_don_nhap: 0,
@@ -74,8 +76,24 @@ export default function DashboardPage() {
   const [hasImportedToday, setHasImportedToday] = useState(false);
 
   useEffect(() => {
-    fetchDashboardData();
+    const init = async () => {
+      await fetchSettings();
+      await fetchDashboardData();
+    };
+    init();
   }, []);
+
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from('app_settings')
+      .select('nguong_canh_bao_mac_dinh')
+      .eq('id', 1)
+      .single();
+    
+    if (data?.nguong_canh_bao_mac_dinh) {
+      setGlobalAlertThreshold(data.nguong_canh_bao_mac_dinh);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -92,7 +110,7 @@ export default function DashboardPage() {
   const fetchInventoryAlerts = async () => {
     const { data: products } = await supabase
       .from('products')
-      .select('id, ten_hang, don_vi')
+      .select('id, ten_hang, don_vi, nguong_canh_bao')
       .eq('active', true);
 
     if (!products) return;
@@ -111,9 +129,11 @@ export default function DashboardPage() {
     const alertsList: InventoryAlert[] = [];
     products.forEach(product => {
       const stock = inventory[product.id] || 0;
+      const threshold = product.nguong_canh_bao ?? globalAlertThreshold;
+      
       if (stock === 0) {
         alertsList.push({ product, ton_kho: stock, level: 'critical' });
-      } else if (stock <= 5) {
+      } else if (stock <= threshold) {
         alertsList.push({ product, ton_kho: stock, level: 'critical' });
       }
     });
@@ -290,7 +310,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => router.push('/nhap-hang')}
+                    onClick={() => router.push(`/nhap-hang?product=${encodeURIComponent(alert.product.ten_hang)}`)}
                     className="ml-2 px-3 py-1.5 clay-button text-sm"
                   >
                     Nhập ngay

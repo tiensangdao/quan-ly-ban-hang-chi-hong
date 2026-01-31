@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber, parseNumber, getTodayDate, formatDateVietnamese, getYesterdayDate, roundNumber } from '@/lib/utils';
 import { PackagePlus, Calendar, Search, ChevronDown, Package, DollarSign, Lightbulb, User, FileText, CheckCircle, Clock, Save, Trash2 } from 'lucide-react';
@@ -10,9 +11,14 @@ interface Product {
     ten_hang: string;
     don_vi: string;
     gia_nhap_gan_nhat: number;
+    gia_nhap_trung_binh?: number;
+    tong_so_luong_nhap?: number;
+    tong_gia_tri_nhap?: number;
+    ty_le_lai_mac_dinh?: number;
 }
 
-export default function NhapHangPage() {
+function NhapHangContent() {
+    const searchParams = useSearchParams();
     // ... (state logic preserved) ...
     const [products, setProducts] = useState<Product[]>([]);
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -25,10 +31,13 @@ export default function NhapHangPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [globalProfitMargin, setGlobalProfitMargin] = useState(50); // Default 50%
+    const [globalAlertThreshold, setGlobalAlertThreshold] = useState(10); // Default 10
 
     const dateInputRef = useRef<HTMLInputElement>(null);
     const soLuongRef = useRef<HTMLInputElement>(null);
     const thanhTienRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
 
@@ -46,12 +55,63 @@ export default function NhapHangPage() {
     }, [soLuong, thanhTien]);
 
     const giaBanGoiY = useMemo(() => {
-        return roundNumber(donGia * 1.5);
-    }, [donGia]);
+        // Use product-specific profit margin, or global if not set
+        const profitMargin = selectedProduct?.ty_le_lai_mac_dinh || globalProfitMargin;
+        const multiplier = 1 + (profitMargin / 100);
+        return roundNumber(donGia * multiplier);
+    }, [donGia, selectedProduct, globalProfitMargin]);
 
     useEffect(() => {
         fetchProducts();
+        fetchSettings();
     }, []);
+
+    const fetchSettings = async () => {
+        const { data } = await supabase
+            .from('app_settings')
+            .select('ty_le_lai_mac_dinh, nguong_canh_bao_mac_dinh')
+            .eq('id', 1)
+            .single();
+        
+        if (data) {
+            if (data.ty_le_lai_mac_dinh) {
+                setGlobalProfitMargin(data.ty_le_lai_mac_dinh);
+            }
+            if (data.nguong_canh_bao_mac_dinh) {
+                setGlobalAlertThreshold(data.nguong_canh_bao_mac_dinh);
+            }
+        }
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        if (isDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isDropdownOpen]);
+
+    // Auto-fill product from URL params
+    useEffect(() => {
+        const productName = searchParams.get('product');
+        if (productName && products.length > 0) {
+            const product = products.find(p => p.ten_hang === productName);
+            if (product) {
+                handleSelectProduct(product);
+            } else {
+                setSearchTerm(productName);
+            }
+        }
+    }, [searchParams, products]);
 
     const fetchProducts = async () => {
         const { data } = await supabase.from('products').select('*').eq('active', true);
@@ -70,6 +130,11 @@ export default function NhapHangPage() {
             ten_hang: tenHang,
             don_vi: 'cái',
             gia_nhap_gan_nhat: giaHap,
+            gia_nhap_trung_binh: 0,
+            tong_so_luong_nhap: 0,
+            tong_gia_tri_nhap: 0,
+            ty_le_lai_mac_dinh: globalProfitMargin,
+            nguong_canh_bao: globalAlertThreshold,
             active: true,
         }).select().single();
 
@@ -111,6 +176,7 @@ export default function NhapHangPage() {
 
         setIsLoading(true);
 
+        // Insert nhap_hang record
         const { error } = await supabase.from('nhap_hang').insert({
             product_id: productIdToUse,
             ngay_thang: ngay,
@@ -121,15 +187,46 @@ export default function NhapHangPage() {
             ghi_chu: ghiChu || null,
         });
 
+        if (error) {
+            setIsLoading(false);
+            alert('Lỗi: ' + error.message);
+            return;
+        }
+
+        // Update product's WAC (Weighted Average Cost)
+        const currentQty = parseNumber(soLuong);
+        const currentPrice = donGia;
+        const currentValue = currentQty * currentPrice;
+
+        const currentProduct = products.find(p => p.id === productIdToUse);
+        const prevQty = currentProduct?.tong_so_luong_nhap || 0;
+        const prevValue = currentProduct?.tong_gia_tri_nhap || 0;
+
+        const newTotalQty = prevQty + currentQty;
+        const newTotalValue = prevValue + currentValue;
+        const newAvgPrice = newTotalQty > 0 ? roundNumber(newTotalValue / newTotalQty) : 0;
+
+        const { error: updateError } = await supabase
+            .from('products')
+            .update({
+                gia_nhap_gan_nhat: currentPrice,
+                gia_nhap_trung_binh: newAvgPrice,
+                tong_so_luong_nhap: newTotalQty,
+                tong_gia_tri_nhap: newTotalValue,
+            })
+            .eq('id', productIdToUse);
+
         setIsLoading(false);
 
-        if (error) {
-            alert('Lỗi: ' + error.message);
-        } else {
-            setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 3000);
-            resetForm();
+        if (updateError) {
+            console.error('WAC update error:', updateError);
+            // Don't fail the whole operation, just log
         }
+
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+        resetForm();
+        await fetchProducts(); // Refresh product list
     };
 
     const resetForm = () => {
@@ -209,7 +306,7 @@ export default function NhapHangPage() {
                     </div>
                 </div>
 
-                <div className="relative clay-card p-5">
+                <div className="relative clay-card p-5" ref={dropdownRef}>
                     <label className="block text-sm font-bold text-foreground mb-3 flex items-center gap-2">
                         <Search className="w-5 h-5 text-primary" />
                         Sản phẩm
@@ -237,7 +334,7 @@ export default function NhapHangPage() {
                     </div>
 
                     {isDropdownOpen && filteredProducts.length > 0 && (
-                        <div className="absolute z-10 w-full mt-2 bg-white border-2 border-orange-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-2 bg-white border-2 border-orange-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto left-0 right-0">
                             {filteredProducts.map((product) => (
                                 <button
                                     key={product.id}
@@ -253,10 +350,25 @@ export default function NhapHangPage() {
                         </div>
                     )}
 
-                    {selectedProduct && selectedProduct.gia_nhap_gan_nhat > 0 && (
-                        <div className="mt-3 flex items-center gap-2 text-sm text-primary font-bold bg-orange-50 p-3 rounded-xl border border-orange-200">
-                            <Lightbulb className="w-5 h-5" />
-                            Giá nhập lần trước: {formatCurrency(selectedProduct.gia_nhap_gan_nhat)}
+                    {selectedProduct && (
+                        <div className="mt-3 space-y-2">
+                            {selectedProduct.gia_nhap_gan_nhat > 0 && (
+                                <div className="flex items-center gap-2 text-sm text-primary font-bold bg-orange-50 p-3 rounded-xl border border-orange-200">
+                                    <Lightbulb className="w-5 h-5" />
+                                    Giá nhập lần trước: {formatCurrency(selectedProduct.gia_nhap_gan_nhat)}
+                                </div>
+                            )}
+                            {selectedProduct.gia_nhap_trung_binh && selectedProduct.gia_nhap_trung_binh > 0 && (
+                                <div className="flex items-center gap-2 text-sm text-blue-700 font-bold bg-blue-50 p-3 rounded-xl border border-blue-200">
+                                    <DollarSign className="w-5 h-5" />
+                                    Giá nhập trung bình: {formatCurrency(selectedProduct.gia_nhap_trung_binh)}
+                                    {selectedProduct.tong_so_luong_nhap && selectedProduct.tong_so_luong_nhap > 0 && (
+                                        <span className="text-xs text-blue-600 ml-auto">
+                                            ({selectedProduct.tong_so_luong_nhap} {selectedProduct.don_vi} đã nhập)
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -315,7 +427,7 @@ export default function NhapHangPage() {
                             <div className="flex justify-between items-center border-t-2 border-orange-200 pt-3">
                                 <span className="text-gray-800 font-bold text-sm flex items-center gap-2">
                                     <Lightbulb className="w-5 h-5 text-green-600" />
-                                    Giá bán gợi ý (+50%)
+                                    Giá bán gợi ý (+{selectedProduct?.ty_le_lai_mac_dinh || globalProfitMargin}%)
                                 </span>
                                 <span className="text-2xl font-black text-green-600">{formatCurrency(giaBanGoiY)}</span>
                             </div>
@@ -370,5 +482,24 @@ export default function NhapHangPage() {
                 </button>
             </div>
         </div>
+    );
+}
+
+export default function NhapHangPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-orange-50/80 to-orange-100/50 p-4 pb-24">
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center py-8">
+                        <div className="animate-pulse">
+                            <div className="h-8 bg-orange-200 rounded w-48 mx-auto mb-4"></div>
+                            <div className="h-4 bg-orange-100 rounded w-32 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }>
+            <NhapHangContent />
+        </Suspense>
     );
 }

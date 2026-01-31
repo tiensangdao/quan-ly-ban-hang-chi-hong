@@ -82,13 +82,30 @@ export async function getSystemStats() {
         supabase.from('ban_hang').select('id', { count: 'exact', head: true }),
     ]);
 
+    // More accurate storage estimation
+    const productRows = productsResult.count || 0;
+    const nhapRows = nhapResult.count || 0;
+    const banRows = banResult.count || 0;
+
+    // Estimated bytes per row (includes columns + overhead)
+    const BYTES_PER_PRODUCT = 250;  // id, ten_hang, don_vi, prices, WAC columns, timestamps
+    const BYTES_PER_NHAP = 180;     // id, product_id, ngay_thang, so_luong, don_gia, etc.
+    const BYTES_PER_BAN = 180;      // id, product_id, ngay_ban, so_luong, gia_ban, gia_nhap, etc.
+    
+    const rawBytes = 
+        (productRows * BYTES_PER_PRODUCT) +
+        (nhapRows * BYTES_PER_NHAP) +
+        (banRows * BYTES_PER_BAN);
+    
+    // Add 30% overhead for indexes, metadata, and PostgreSQL internal structures
+    const totalBytes = rawBytes * 1.3;
+    const storageMB = totalBytes / (1024 * 1024); // Convert to MB
+
     const stats = {
-        products: productsResult.count || 0,
-        nhap_hang: nhapResult.count || 0,
-        ban_hang: banResult.count || 0,
-        storage: ((productsResult.count || 0) * 0.5 +
-            (nhapResult.count || 0) * 0.5 +
-            (banResult.count || 0) * 0.5) / 1000, // Estimate in MB
+        products: productRows,
+        nhap_hang: nhapRows,
+        ban_hang: banRows,
+        storage: Math.max(0.01, Number(storageMB.toFixed(2))), // Minimum 0.01 MB
     };
 
     return stats;

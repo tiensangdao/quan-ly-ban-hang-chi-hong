@@ -589,80 +589,100 @@ export default function TonKhoPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-orange-50/30">
-                            {filteredHistory.map((record) => (
-                                <div
-                                    key={record.id}
-                                    className={`p-4 rounded-xl border-2 shadow-sm ${record.loai === 'nhap'
-                                        ? 'bg-white border-blue-100'
-                                        : 'bg-white border-green-100'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex items-center gap-2">
-                                            {record.loai === 'nhap' ? (
-                                                <>
-                                                    <div className="bg-blue-500 p-1.5 rounded-lg shadow-sm">
-                                                        <TrendingDown className="w-4 h-4 text-white" />
+                        <div className="flex-1 overflow-y-auto bg-orange-50/30">
+                            {/* Table View */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gradient-to-r from-orange-500 to-orange-400 text-white sticky top-0 shadow-md">
+                                        <tr>
+                                            <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">Loại</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">Ngày</th>
+                                            <th className="px-3 py-3 text-right text-xs font-bold uppercase tracking-wide">Số lượng</th>
+                                            <th className="px-3 py-3 text-right text-xs font-bold uppercase tracking-wide">Đơn giá</th>
+                                            <th className="px-3 py-3 text-right text-xs font-bold uppercase tracking-wide">Thành tiền</th>
+                                            <th className="px-3 py-3 text-left text-xs font-bold uppercase tracking-wide">Ghi chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-100">
+                                        {filteredHistory.map((record, index) => (
+                                            <tr 
+                                                key={record.id}
+                                                className={`${index % 2 === 0 ? 'bg-white' : 'bg-orange-50/20'} hover:bg-orange-50 transition-colors`}
+                                            >
+                                                {/* Loại */}
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        {record.loai === 'nhap' ? (
+                                                            <>
+                                                                <div className="bg-blue-500 p-1 rounded shadow-sm">
+                                                                    <TrendingDown className="w-3 h-3 text-white" />
+                                                                </div>
+                                                                <span className="text-xs font-bold text-blue-700">Nhập</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="bg-green-500 p-1 rounded shadow-sm">
+                                                                    <TrendingUp className="w-3 h-3 text-white" />
+                                                                </div>
+                                                                <span className="text-xs font-bold text-green-700">Bán</span>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                    <span className="font-bold text-gray-900">Nhập hàng</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="bg-green-500 p-1.5 rounded-lg shadow-sm">
-                                                        <TrendingUp className="w-4 h-4 text-white" />
+                                                </td>
+                                                
+                                                {/* Ngày */}
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    <span className="text-sm font-semibold text-gray-700">
+                                                        {formatDateVietnamese(record.ngay)}
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* Số lượng */}
+                                                <td className="px-3 py-3 text-right whitespace-nowrap">
+                                                    <span className={`font-bold text-sm ${record.loai === 'nhap' ? 'text-blue-600' : 'text-green-600'}`}>
+                                                        {record.loai === 'nhap' ? '+' : '-'}{record.so_luong}
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* Đơn giá */}
+                                                <td className="px-3 py-3 text-right whitespace-nowrap">
+                                                    <span className="font-bold text-gray-900">
+                                                        {formatCurrency(record.don_gia)}
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* Thành tiền */}
+                                                <td className="px-3 py-3 text-right whitespace-nowrap">
+                                                    <span className="font-bold text-primary">
+                                                        {formatCurrency(record.so_luong * record.don_gia)}
+                                                    </span>
+                                                </td>
+                                                
+                                                {/* Ghi chú */}
+                                                <td className="px-3 py-3">
+                                                    <div className="text-xs space-y-1">
+                                                        {record.nha_cung_cap && (
+                                                            <div className="text-gray-600">
+                                                                <span className="font-semibold">NCC:</span> {record.nha_cung_cap}
+                                                            </div>
+                                                        )}
+                                                        {record.khach_hang && (
+                                                            <div className="text-gray-600">
+                                                                <span className="font-semibold">Khách:</span> {record.khach_hang}
+                                                            </div>
+                                                        )}
+                                                        {record.loai === 'ban' && record.gia_nhap && (
+                                                            <div className={`font-bold ${record.don_gia > record.gia_nhap ? 'text-green-600' : 'text-red-600'}`}>
+                                                                Lời: {record.don_gia > record.gia_nhap ? '+' : ''}{formatCurrency(record.don_gia - record.gia_nhap)}/cái
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <span className="font-bold text-gray-900">Bán hàng</span>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-gray-500">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                            <span className="text-xs font-semibold">
-                                                {formatDateVietnamese(record.ngay)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                            <span className="text-sm font-medium text-gray-600">Số lượng:</span>
-                                            <span className="font-bold text-gray-900">
-                                                {record.loai === 'nhap' ? '+' : '-'}{record.so_luong} {selectedProduct.don_vi}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                            <span className="text-sm font-medium text-gray-600">Đơn giá:</span>
-                                            <span className="font-bold text-gray-900">
-                                                {formatCurrency(record.don_gia)}
-                                            </span>
-                                        </div>
-                                        {record.loai === 'ban' && record.gia_nhap && (
-                                            <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                                <span className="text-sm font-medium text-gray-600">Lời/cái:</span>
-                                                <span className={`font-bold ${record.don_gia > record.gia_nhap
-                                                        ? 'text-green-600'
-                                                        : 'text-red-600'
-                                                    }`}>
-                                                    {record.don_gia > record.gia_nhap ? '+' : ''}{formatCurrency(record.don_gia - record.gia_nhap)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {record.nha_cung_cap && (
-                                            <div className="flex justify-between items-center px-2">
-                                                <span className="text-xs font-bold text-gray-400 uppercase">NCC:</span>
-                                                <span className="text-sm font-semibold text-gray-700">{record.nha_cung_cap}</span>
-                                            </div>
-                                        )}
-                                        {record.khach_hang && (
-                                            <div className="flex justify-between items-center px-2">
-                                                <span className="text-xs font-bold text-gray-400 uppercase">Khách:</span>
-                                                <span className="text-sm font-semibold text-gray-700">{record.khach_hang}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
                             {filteredHistory.length === 0 && (
                                 <div className="text-center py-12 text-gray-400 font-medium">

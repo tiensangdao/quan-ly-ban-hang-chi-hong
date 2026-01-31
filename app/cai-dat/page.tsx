@@ -19,6 +19,7 @@ import { Settings, Save, Database, Download, FileSpreadsheet, Package, Search, T
 interface Settings {
     ty_le_lai_mac_dinh: number;
     nguong_canh_bao_mac_dinh: number;
+    gia_ban_tinh_theo: 'gia_gan_nhat' | 'gia_trung_binh';
     email_backup_enabled: boolean;
     email_backup_address: string;
     email_backup_frequency: string;
@@ -364,6 +365,53 @@ export default function CaiDatPage() {
                         />
                     </div>
 
+                    <div>
+                        <label className="block text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-blue-600" />
+                            Cách tính giá bán khuyến nghị
+                        </label>
+                        <div className="space-y-3 p-4 bg-blue-50/30 rounded-xl border border-blue-100">
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <input
+                                    type="radio"
+                                    name="gia_ban_tinh_theo"
+                                    value="gia_gan_nhat"
+                                    checked={settings?.gia_ban_tinh_theo === 'gia_gan_nhat'}
+                                    onChange={(e) => setSettings(prev => prev ? { ...prev, gia_ban_tinh_theo: 'gia_gan_nhat' } : null)}
+                                    className="mt-1 w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                                />
+                                <div className="flex-1">
+                                    <div className="font-bold text-foreground group-hover:text-primary transition-colors">
+                                        Dựa trên giá nhập gần nhất
+                                    </div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                        Đơn giản, phù hợp với hàng giá ổn định (ít thay đổi)
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <input
+                                    type="radio"
+                                    name="gia_ban_tinh_theo"
+                                    value="gia_trung_binh"
+                                    checked={settings?.gia_ban_tinh_theo === 'gia_trung_binh'}
+                                    onChange={(e) => setSettings(prev => prev ? { ...prev, gia_ban_tinh_theo: 'gia_trung_binh' } : null)}
+                                    className="mt-1 w-4 h-4 text-primary focus:ring-primary border-gray-300"
+                                />
+                                <div className="flex-1">
+                                    <div className="font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                                        Dựa trên giá nhập trung bình (WAC)
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Khuyến nghị</span>
+                                    </div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                        An toàn, không bao giờ lỗ. Phù hợp với hàng nhập nhiều lần, giá dao động
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div className="p-4 bg-orange-50/50 rounded-xl border border-orange-100 space-y-3">
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input
@@ -433,7 +481,7 @@ export default function CaiDatPage() {
                             <HardDrive className="w-4 h-4" /> Dung lượng
                         </span>
                         <span className="font-bold text-foreground text-lg">
-                            {systemStats?.storage ? (systemStats.storage / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'}
+                            {systemStats?.storage ? systemStats.storage.toFixed(2) + ' MB' : '0 MB'}
                         </span>
                     </div>
                     <div className="text-center pt-2">

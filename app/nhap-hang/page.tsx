@@ -78,7 +78,7 @@ function NhapHangContent() {
             .select('ty_le_lai_mac_dinh, nguong_canh_bao_mac_dinh')
             .eq('id', 1)
             .single();
-        
+
         if (data) {
             if (data.ty_le_lai_mac_dinh) {
                 setGlobalProfitMargin(data.ty_le_lai_mac_dinh);
@@ -150,18 +150,23 @@ function NhapHangContent() {
     };
 
     const handleUpdateUnit = async (newUnit: string) => {
-        if (!selectedProduct || !newUnit.trim()) return;
-        
-        setCustomUnit(newUnit);
-        
-        const { error } = await supabase
-            .from('products')
-            .update({ don_vi: newUnit.trim() })
-            .eq('id', selectedProduct.id);
-        
-        if (!error) {
-            await fetchProducts();
-            setIsUnitDropdownOpen(false);
+        if (!newUnit.trim()) return;
+
+        setCustomUnit(newUnit.trim());
+        setIsUnitDropdownOpen(false);
+
+        // Only update database if a product is selected
+        if (selectedProduct) {
+            const { error } = await supabase
+                .from('products')
+                .update({ don_vi: newUnit.trim() })
+                .eq('id', selectedProduct.id);
+
+            if (error) {
+                console.error('Error updating unit:', error);
+            } else {
+                await fetchProducts();
+            }
         }
     };
 
@@ -302,8 +307,8 @@ function NhapHangContent() {
                         Ngày
                     </label>
 
-                    <div className="bg-orange-50 border-2 border-orange-100 rounded-xl p-4 mb-3 shadow-inner">
-                        <div className="text-2xl font-bold text-primary text-center">
+                    <div className="bg-orange-50 border-2 border-orange-100 rounded-xl p-4 mb-3 shadow-inner" suppressHydrationWarning>
+                        <div className="text-2xl font-bold text-primary text-center" suppressHydrationWarning>
                             {formatDateVietnamese(ngay)}
                         </div>
                     </div>
@@ -441,39 +446,37 @@ function NhapHangContent() {
                                     value={customUnit}
                                     onChange={(e) => setCustomUnit(e.target.value)}
                                     onBlur={(e) => {
-                                        if (selectedProduct && e.target.value.trim()) {
+                                        if (e.target.value.trim()) {
                                             handleUpdateUnit(e.target.value);
                                         }
                                     }}
                                     onKeyPress={(e) => {
-                                        if (e.key === 'Enter' && selectedProduct && customUnit.trim()) {
+                                        if (e.key === 'Enter' && customUnit.trim()) {
                                             e.preventDefault();
                                             handleUpdateUnit(customUnit);
                                             (e.target as HTMLInputElement).blur();
                                         }
                                     }}
-                                    disabled={!selectedProduct}
-                                    className="w-20 px-2 py-1 text-center border-2 border-gray-200 rounded-lg font-bold text-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                                    className="w-20 px-2 py-1 text-center border-2 border-gray-200 rounded-lg font-bold text-lg text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                                     placeholder="cái"
                                 />
                                 <button
+                                    type="button"
                                     onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
                                     className="p-1 hover:bg-orange-50 rounded-lg transition-colors"
-                                    disabled={!selectedProduct}
                                 >
                                     <ChevronDown className="w-5 h-5 text-primary" />
                                 </button>
                             </div>
-                            
-                            {isUnitDropdownOpen && selectedProduct && (
+
+                            {isUnitDropdownOpen && (
                                 <div className="absolute z-10 right-0 mt-2 bg-white border-2 border-orange-100 rounded-xl shadow-2xl min-w-[120px] overflow-hidden">
                                     {commonUnits.map((unit) => (
                                         <button
                                             key={unit}
                                             onClick={() => handleUpdateUnit(unit)}
-                                            className={`w-full px-4 py-2.5 text-left hover:bg-orange-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                                                unit === selectedProduct?.don_vi ? 'bg-orange-100 font-bold text-primary' : 'font-medium'
-                                            }`}
+                                            className={`w-full px-4 py-2.5 text-left hover:bg-orange-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${unit === customUnit ? 'bg-orange-100 font-bold text-primary' : 'font-medium'
+                                                }`}
                                         >
                                             {unit}
                                         </button>

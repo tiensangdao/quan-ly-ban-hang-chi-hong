@@ -1,5 +1,6 @@
 'use client';
 
+// Report Page Logic
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, roundNumber } from '@/lib/utils';

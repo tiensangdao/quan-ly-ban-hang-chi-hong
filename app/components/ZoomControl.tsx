@@ -4,16 +4,20 @@ import { useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 export default function ZoomControl() {
-    const [zoom, setZoom] = useState(100);
+    const [zoom, setZoom] = useState(80); // Default 80%
     const [isOpen, setIsOpen] = useState(false);
 
-    // Load saved zoom level on mount
+    // Load saved zoom level on mount, or apply default 80%
     useEffect(() => {
         const savedZoom = localStorage.getItem('app-zoom-level');
         if (savedZoom) {
             const zoomValue = parseInt(savedZoom);
             setZoom(zoomValue);
             applyZoom(zoomValue);
+        } else {
+            // Apply default 80% on first visit
+            applyZoom(80);
+            localStorage.setItem('app-zoom-level', '80');
         }
     }, []);
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import BottomNav from "./components/BottomNav";
+import ZoomControl from "./components/ZoomControl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <main className="max-w-2xl mx-auto bg-background min-h-screen shadow-sm">
           {children}
         </main>
+        <ZoomControl />
         <BottomNav />
       </body>
     </html>
